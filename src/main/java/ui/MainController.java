@@ -72,6 +72,7 @@ public class MainController implements GameClientStateListener {
   private UIState currentState = UIState.MENU;
 
   private PipedOutputStream pipedOutputStream;
+  private TextAreaOutputStream taos;
 
   @FXML
   public void initialize() {
@@ -98,7 +99,7 @@ public class MainController implements GameClientStateListener {
     roomPane.getChildren().add(roomView);
 
     // Redirect System.out and System.in
-    TextAreaOutputStream taos = new TextAreaOutputStream(terminalTextArea);
+    this.taos = new TextAreaOutputStream(terminalTextArea);
     GameOutputParser parser = new GameOutputParser(this);
     taos.setParser(parser);
     System.setOut(new PrintStream(taos, true));
@@ -262,7 +263,7 @@ public class MainController implements GameClientStateListener {
     String host = getLaunchArg(0, NetworkConstants.DEFAULT_HOST);
     int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);
 
-    gameClient = new GameClient(host, port);
+    gameClient = new GameClient(host, port, this.taos);
     gameClient.setListener(this);
 
     gameClientThread = new Thread(() -> {

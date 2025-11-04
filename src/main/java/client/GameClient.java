@@ -62,11 +62,17 @@ public class GameClient implements Runnable {
 
   private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
   private final ReentrantLock consoleLock = new ReentrantLock();
+  private final java.io.PrintStream out;
 
-  public GameClient(String host, int port) {
+  public GameClient(String host, int port, ui.util.TextAreaOutputStream taos) {
     this.host = host;
     this.port = port;
     this.playerDisplayId = "Player" + (int) (Math.random() * 9000 + 1000);
+    if (taos != null) {
+      this.out = new java.io.PrintStream(taos, true);
+    } else {
+      this.out = System.out;
+    }
   }
 
   public void setListener(GameClientStateListener listener) {
@@ -1143,7 +1149,7 @@ public class GameClient implements Runnable {
   private void printToConsole(String message) {
     consoleLock.lock();
     try {
-      System.out.println(message);
+      out.println(message);
     } finally {
       consoleLock.unlock();
     }

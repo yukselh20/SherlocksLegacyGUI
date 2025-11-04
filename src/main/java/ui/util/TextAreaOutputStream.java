@@ -54,6 +54,14 @@ public class TextAreaOutputStream extends OutputStream {
       final String text = buffer.toString();
       buffer.setLength(0); // Clear buffer
 
+      // Parse the text for game events if parser is set
+      if (parser != null && text.contains("\n")) {
+        String[] lines = text.split("\n");
+        for (String line : lines) {
+          parser.parseLine(line);
+        }
+      }
+
       // Update UI on JavaFX Application Thread
       Platform.runLater(() -> {
         textArea.appendText(text);

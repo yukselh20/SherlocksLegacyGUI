@@ -1,15 +1,19 @@
 package common.commands;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import common.dto.JoinPrivateGameRequestDTO;
 import common.interfaces.GameActionContext;
 import java.io.Serial;
 
 public class JoinPrivateGameCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
-  private final JoinPrivateGameRequestDTO payload; // Store the request DTO
+  @Serial
+  private static final long serialVersionUID = 1L;
+  private final JoinPrivateGameRequestDTO payload;
 
-  public JoinPrivateGameCommand(JoinPrivateGameRequestDTO payload) {
-    super(false); // Does not require case started
+  @JsonCreator
+  public JoinPrivateGameCommand(@JsonProperty("payload") JoinPrivateGameRequestDTO payload) {
+    super(false);
     if (payload == null) {
       throw new IllegalArgumentException("Payload cannot be null for JoinPrivateGameCommand.");
     }
@@ -22,15 +26,7 @@ public class JoinPrivateGameCommand extends BaseCommand {
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
-    // Server-side logic: GameSessionManager receives this, extracts the gameCode from payload,
-    // finds the private lobby by code, attempts to add the player,
-    // and sends back JoinGameResponseDTO.
-    System.out.println(
-        "Server received JoinPrivateGameCommand for code: "
-            + payload.getGameCode()
-            + " from player: "
-            + getPlayerId());
-    // Actual processing happens in GameSessionManager.processLobbyCommand
+    System.out.println("Server received JoinPrivateGameCommand for code: " + payload.getGameCode() + " from player: " + getPlayerId());
   }
 
   @Override

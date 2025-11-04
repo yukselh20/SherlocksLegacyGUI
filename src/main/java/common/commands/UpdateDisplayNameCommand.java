@@ -1,15 +1,19 @@
 package common.commands;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import common.dto.UpdateDisplayNameRequestDTO;
 import common.interfaces.GameActionContext;
 import java.io.Serial;
 
 public class UpdateDisplayNameCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
   private final UpdateDisplayNameRequestDTO payload;
 
-  public UpdateDisplayNameCommand(UpdateDisplayNameRequestDTO payload) {
-    super(false); // Can be used whether case is started or not
+  @JsonCreator
+  public UpdateDisplayNameCommand(@JsonProperty("payload") UpdateDisplayNameRequestDTO payload) {
+    super(false);
     this.payload = payload;
   }
 
@@ -19,9 +23,6 @@ public class UpdateDisplayNameCommand extends BaseCommand {
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
-    // Server-side: GameContextServer or GameSessionManager will handle this
-    // It needs to access the ClientSession object associated with getPlayerId()
-    // and update its display name, then broadcast PlayerNameChangedDTO.
     context.processUpdateDisplayName(getPlayerId(), payload.getNewDisplayName());
   }
 

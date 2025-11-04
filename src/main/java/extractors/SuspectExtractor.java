@@ -1,10 +1,17 @@
 package extractors; // Or your chosen package for extractors
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import JsonDTO.CaseData;
+
 import Core.Room;
 import Core.Suspect;
 import JsonDTO.CaseFile;
 import common.interfaces.GameContext;
-import java.util.*;
 
 // ... other necessary imports for loadSuspects if it's in this file ...
 
@@ -20,12 +27,11 @@ public class SuspectExtractor {
   private SuspectExtractor() {} // Utility class
 
   // Assuming your loadSuspects method is also in this class
-  public static void loadSuspects(CaseFile caseFile, GameContext context)
-      throws NoValidRoomsException { // Make it throw NoValidRoomsException
+  public static void loadSuspects(CaseData caseFile, GameContext context) throws NoValidRoomsException { // Make it throw NoValidRoomsException
     if (caseFile == null || caseFile.getSuspects() == null) {
       context.logLoadingMessage(
-          "Warning: No suspects defined in case file or case file is null for "
-              + context.getContextIdForLog());
+              "Warning: No suspects defined in case file or case file is null for "
+                      + context.getContextIdForLog());
       return;
     }
 
@@ -35,24 +41,24 @@ public class SuspectExtractor {
       String suspectName = suspectData.getName();
       if (suspectName == null || suspectName.trim().isEmpty()) {
         context.logLoadingMessage(
-            "Warning: Skipping suspect with null or empty name in " + context.getContextIdForLog());
+                "Warning: Skipping suspect with null or empty name in " + context.getContextIdForLog());
         continue;
       }
       if (!suspectNames.add(suspectName.toLowerCase())) {
         context.logLoadingMessage(
-            "Warning: Duplicate suspect name '"
-                + suspectName
-                + "' found. Skipping duplicate in "
-                + context.getContextIdForLog());
+                "Warning: Duplicate suspect name '"
+                        + suspectName
+                        + "' found. Skipping duplicate in "
+                        + context.getContextIdForLog());
         continue;
       }
 
       Suspect suspect =
-          new Suspect(suspectData.getName(), suspectData.getStatement(), suspectData.getClue());
+              new Suspect(suspectData.getName(), suspectData.getStatement(), suspectData.getClue());
 
       try {
         Room startingRoom =
-            assignRandomStartingRoom(suspect, context, context.getContextIdForLog());
+                assignRandomStartingRoom(suspect, context, context.getContextIdForLog());
         suspect.setCurrentRoom(startingRoom);
         context.addSuspect(suspect);
       } catch (NoValidRoomsException e) {
@@ -61,12 +67,12 @@ public class SuspectExtractor {
         // loading.
         // For now, let's log and re-throw if loadSuspects is declared to throw it.
         context.logLoadingMessage(
-            "Error placing suspect '"
-                + suspect.getName()
-                + "': "
-                + e.getMessage()
-                + " for "
-                + context.getContextIdForLog());
+                "Error placing suspect '"
+                        + suspect.getName()
+                        + "': "
+                        + e.getMessage()
+                        + " for "
+                        + context.getContextIdForLog());
         throw e; // Or handle by skipping this suspect and continuing
       }
     }
@@ -82,14 +88,14 @@ public class SuspectExtractor {
    * @throws NoValidRoomsException if no rooms are available in the context.
    */
   private static Room assignRandomStartingRoom(
-      Suspect suspect, GameContext context, String contextId) throws NoValidRoomsException {
+          Suspect suspect, GameContext context, String contextId) throws NoValidRoomsException {
 
     if (context == null || context.getAllRooms() == null) {
       throw new NoValidRoomsException(
-          "Game context or room list is null, cannot assign room for suspect: "
-              + suspect.getName()
-              + " in "
-              + contextId);
+              "Game context or room list is null, cannot assign room for suspect: "
+                      + suspect.getName()
+                      + " in "
+                      + contextId);
     }
 
     // CORRECTED LINE:
@@ -97,10 +103,10 @@ public class SuspectExtractor {
 
     if (allRoomsCollection.isEmpty()) {
       throw new NoValidRoomsException(
-          "No rooms available in context '"
-              + contextId
-              + "' to assign to suspect: "
-              + suspect.getName());
+              "No rooms available in context '"
+                      + contextId
+                      + "' to assign to suspect: "
+                      + suspect.getName());
     }
 
     // Convert collection to list to get random element by index

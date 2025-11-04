@@ -1,17 +1,21 @@
 package common.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
 
 public class ExamQuestionDTO implements Serializable {
-  @Serial private static final long serialVersionUID = 1L;
-  private final int questionNumber; // For ordering and reference
+  @Serial
+  private static final long serialVersionUID = 1L;
+  private final int questionNumber;
   private final String questionText;
 
-  // Answer is NOT sent to client with the question
-
-  public ExamQuestionDTO(int questionNumber, String questionText) {
+  @JsonCreator
+  public ExamQuestionDTO(
+          @JsonProperty("questionNumber") int questionNumber,
+          @JsonProperty("questionText") String questionText) {
     this.questionNumber = questionNumber;
     this.questionText = Objects.requireNonNull(questionText, "Question text cannot be null");
   }

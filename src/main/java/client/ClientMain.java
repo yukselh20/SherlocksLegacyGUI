@@ -6,8 +6,7 @@ public class ClientMain {
 
   /**
    * Entry point for the client application. Parses optional host/port args, creates a GameClient,
-   * and directly runs its main logic loop. This method will block until the GameClient finishes its
-   * execution.
+   * and directly runs its main logic loop.
    */
   public static void main(String[] args) {
     // Default connection settings.
@@ -23,11 +22,11 @@ public class ClientMain {
         port = Integer.parseInt(args[1]);
       } catch (NumberFormatException e) {
         System.err.println(
-            "ClientMain: Invalid port number provided: '"
-                + args[1]
-                + "'. Using default port "
-                + port
-                + ".");
+                "ClientMain: Invalid port number provided: '"
+                        + args[1]
+                        + "'. Using default port "
+                        + port
+                        + ".");
       }
     }
 
@@ -44,7 +43,7 @@ public class ClientMain {
       // Catch any unexpected, unhandled exceptions from GameClient.run()
       // to prevent ClientMain from crashing silently.
       System.err.println(
-          "ClientMain: CRITICAL UNHANDLED ERROR from GameClient.run(): " + e.getMessage());
+              "ClientMain: CRITICAL UNHANDLED ERROR from GameClient.run(): " + e.getMessage());
       e.printStackTrace();
     }
 

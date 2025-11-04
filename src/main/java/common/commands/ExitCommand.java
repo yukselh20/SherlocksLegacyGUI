@@ -1,27 +1,20 @@
 package common.commands;
 
-import common.interfaces.GameActionContext;
 import java.io.Serial;
 
+import common.interfaces.GameActionContext;
+
 public class ExitCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
   public ExitCommand() {
-    super(false); // Can be used whether case is started or not.
+    // FIX: Changed from true to false. An exit command must be allowed in a lobby.
+    super(false);
   }
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
-    // The context.handlePlayerExit(getPlayerId()) will implement the mode-specific logic.
-    // For example:
-    // context.sendResponseToPlayer(getPlayerId(), new TextMessage("Exiting current context...",
-    // false));
-    // The actual state transition (to case select, lobby, or app exit) is managed by
-    // the specific GameActionContext implementation (SP or Server).
-    // Server context might trigger a change in the client's state via a specific DTO.
-
-    // This is a crucial method that GameContextSinglePlayer and GameContextServer
-    // will implement differently.
     context.handlePlayerExitRequest(getPlayerId());
   }
 

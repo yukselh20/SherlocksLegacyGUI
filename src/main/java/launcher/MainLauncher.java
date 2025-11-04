@@ -1,7 +1,8 @@
 package launcher;
 
-import client.ClientMain;
 import java.util.Scanner;
+
+import client.ClientMain;
 import server.ServerMain;
 import singleplayer.SinglePlayerMain;
 

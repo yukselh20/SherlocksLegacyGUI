@@ -28,7 +28,7 @@ public class ServerMain {
       // Server console input loop
       consoleScanner = new Scanner(System.in); // Assign here
       server.log(
-          "Server console ready. Type 'shutdown' to stop the server or 'saveall' to save games.");
+          "Server console ready. Type 'shutdown' to stop the server.");
       label:
       while (true) {
         String input;
@@ -59,14 +59,6 @@ public class ServerMain {
             server.stopServer(); // Signals the server thread to stop
 
             break label; // Exit console loop
-          case "saveall":
-            server.log("SaveAll command received from console.");
-            if (server.sessionManager != null) {
-              server.sessionManager.saveAllActiveGames();
-            } else {
-              server.log("Session Manager not available to save games.");
-            }
-            break;
           case "reloadcases":
             server.log("ReloadCases command received from console.");
             if (server.sessionManager != null) {

@@ -15,12 +15,16 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * GameServer This is my main NIO server class. It listens for client connections, manages reads and
  * writes for connected clients, and routes messages. It runs in its own thread.
  */
 public class GameServer implements Runnable {
+
+  private static final Logger logger = LoggerFactory.getLogger(GameServer.class);
 
   // --- Fields ---
   private final int port;
@@ -32,8 +36,6 @@ public class GameServer implements Runnable {
   private final Map<SocketChannel, ClientSession> clientSessionsMap;
   // Manages game rooms, lobbies, etc. Protected so ServerMain can access for admin commands.
   protected final GameSessionManager sessionManager;
-  // Handles saving/loading game state.
-  private final PersistenceManager persistenceManager;
 
   private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
 
@@ -41,10 +43,7 @@ public class GameServer implements Runnable {
   public GameServer(int port) {
     this.port = port;
     this.clientSessionsMap = new ConcurrentHashMap<>(); // Thread-safe map for client sessions.
-    // PersistenceManager needs 'this' (GameServer) for logging.
-    this.persistenceManager = new PersistenceManager("saved_games", this);
-    // SessionManager needs 'this' (GameServer) and PersistenceManager.
-    this.sessionManager = new GameSessionManager(this, this.persistenceManager);
+    this.sessionManager = new GameSessionManager(this);
   }
 
   // --- Server Setup & Control ---
@@ -59,7 +58,7 @@ public class GameServer implements Runnable {
     this.serverSocketChannel.configureBlocking(false); // Non-blocking for selector.
     this.serverSocketChannel.socket().bind(new InetSocketAddress(port));
     this.serverSocketChannel.register(
-        selector, SelectionKey.OP_ACCEPT); // Listen for new connections.
+            selector, SelectionKey.OP_ACCEPT); // Listen for new connections.
 
     log("Server started on port " + port + ". Waiting for connections...");
   }
@@ -110,10 +109,6 @@ public class GameServer implements Runnable {
       } catch (IOException e) {
         logError("Error closing server socket channel: " + e.getMessage(), e);
       }
-    }
-    // Important: Save all active games before the server fully exits.
-    if (sessionManager != null) {
-      sessionManager.saveAllActiveGames();
     }
     log("Server has shut down internals.");
     // clientSessionsMap will be cleared as clients get cleaned up.
@@ -166,26 +161,26 @@ public class GameServer implements Runnable {
             // ClientSession object might still be in map if cleanupClient hasn't run for this key
             // yet.
             ClientSession client =
-                (ClientSession) key.attachment(); // More reliable way to get session
+                    (ClientSession) key.attachment(); // More reliable way to get session
             String clientId =
-                (client != null)
-                    ? client.getPlayerId()
-                    : "Unknown (channel: " + key.channel().hashCode() + ")";
+                    (client != null)
+                            ? client.getPlayerId()
+                            : "Unknown (channel: " + key.channel().hashCode() + ")";
             log("Key cancelled for client " + clientId + " during event processing. Cleaning up.");
             cleanupClient(key, "Key was cancelled during op");
           } catch (IOException e) {
             // Network errors (e.g., client disconnected abruptly).
             ClientSession client = (ClientSession) key.attachment();
             String clientId =
-                (client != null)
-                    ? client.getPlayerId()
-                    : "Unknown (channel: " + key.channel().hashCode() + ")";
+                    (client != null)
+                            ? client.getPlayerId()
+                            : "Unknown (channel: " + key.channel().hashCode() + ")";
             log(
-                "I/O Error for client "
-                    + clientId
-                    + ": "
-                    + e.getMessage()
-                    + ". Closing connection.");
+                    "I/O Error for client "
+                            + clientId
+                            + ": "
+                            + e.getMessage()
+                            + ". Closing connection.");
             cleanupClient(key, "I/O Error: " + e.getMessage());
           } catch (Exception e) {
             // Catch-all for unexpected errors during key processing to keep server running.
@@ -223,8 +218,8 @@ public class GameServer implements Runnable {
     if (clientChannel != null) {
       clientChannel.configureBlocking(false); // Must be non-blocking for selector.
       SelectionKey clientKey =
-          clientChannel.register(
-              selector, SelectionKey.OP_READ); // Initially interested in reading.
+              clientChannel.register(
+                      selector, SelectionKey.OP_READ); // Initially interested in reading.
 
       ClientSession clientSession = new ClientSession(clientChannel, this);
       clientKey.attach(clientSession); // Attach session object to key for easy retrieval.
@@ -232,21 +227,21 @@ public class GameServer implements Runnable {
 
       SocketAddress remoteAddr = clientChannel.getRemoteAddress();
       log(
-          "Accepted new connection from: "
-              + (remoteAddr != null ? remoteAddr.toString() : "Unknown")
-              + " | PlayerID: "
-              + clientSession.getPlayerId()
-              + " (Display: "
-              + clientSession.getDisplayId()
-              + ")");
+              "Accepted new connection from: "
+                      + (remoteAddr != null ? remoteAddr.toString() : "Unknown")
+                      + " | PlayerID: "
+                      + clientSession.getPlayerId()
+                      + " (Display: "
+                      + clientSession.getDisplayId()
+                      + ")");
 
       // Send initial DTOs for client setup.
       clientSession.send(
-          new ClientIdAssignmentDTO(clientSession.getPlayerId(), clientSession.getDisplayId()));
+              new ClientIdAssignmentDTO(clientSession.getPlayerId(), clientSession.getDisplayId()));
       clientSession.send(
-          new TextMessage(
-              "Welcome, " + clientSession.getDisplayId() + "! Connected to Detective Game Server.",
-              false));
+              new TextMessage(
+                      "Welcome, " + clientSession.getDisplayId() + "! Connected to Detective Game Server.",
+                      false));
     }
   }
 
@@ -257,8 +252,8 @@ public class GameServer implements Runnable {
     } else {
       // This shouldn't happen if attach() was successful and key is valid.
       log(
-          "Warning: Read event for key with no ClientSession attachment. Channel: "
-              + key.channel().hashCode());
+              "Warning: Read event for key with no ClientSession attachment. Channel: "
+                      + key.channel().hashCode());
       key.channel().close();
       key.cancel();
     }
@@ -270,8 +265,8 @@ public class GameServer implements Runnable {
       clientSession.handleWrite(); // Delegate to ClientSession to write queued data.
     } else {
       log(
-          "Warning: Write event for key with no ClientSession attachment. Channel: "
-              + key.channel().hashCode());
+              "Warning: Write event for key with no ClientSession attachment. Channel: "
+                      + key.channel().hashCode());
       key.channel().close();
       key.cancel();
     }
@@ -299,20 +294,20 @@ public class GameServer implements Runnable {
     } else if (message instanceof ChatMessage chatMsg) {
       GameSession session = sender.getAssociatedGameSession();
       if (session != null
-          && (session.getState() == GameSessionState.ACTIVE
+              && (session.getState() == GameSessionState.ACTIVE
               || session.getState() == GameSessionState.IN_LOBBY_AWAITING_START
               || (session.getState() == GameSessionState.WAITING_FOR_PLAYERS
-                  && session.isFull()))) {
+              && session.isFull()))) {
         session.processChatMessage(chatMsg);
       } else {
         sender.send(new TextMessage("Chat only available in game lobbies or active games.", true));
       }
     } else {
       log(
-          "Warning: Received unknown object type from "
-              + sender.getPlayerId()
-              + ": "
-              + message.getClass().getName());
+              "Warning: Received unknown object type from "
+                      + sender.getPlayerId()
+                      + ": "
+                      + message.getClass().getName());
       sender.send(new TextMessage("Server received an unknown message type.", true));
     }
   }
@@ -321,74 +316,37 @@ public class GameServer implements Runnable {
    * Cleans up a client connection: cancels key, closes channel, notifies session manager. Called
    * when an error occurs or client disconnects.
    */
+
+
+// PASTE THIS, REPLACING the current cleanupClient method in server/GameServer.java
+
   private void cleanupClient(SelectionKey key, String reason) {
     SocketChannel clientChannel = null;
     ClientSession clientSession = null;
 
     if (key != null) {
       clientChannel = (SocketChannel) key.channel();
-      clientSession = (ClientSession) key.attachment(); // Get session from attachment
-      key.cancel(); // Cancel the key with the selector.
+      clientSession = (ClientSession) key.attachment();
+      key.cancel();
     }
 
-    // Remove from map if still using it as primary lookup, though attachment is better.
     if (clientChannel != null) {
       clientSessionsMap.remove(clientChannel);
     }
 
+    if (clientSession != null) {
+      logger.info("Cleaning up client {}. Reason: {}", clientSession.getDisplayId(), reason);
+      sessionManager.handleClientDisconnect(clientSession);
+    } else {
+      logger.info("Cleaning up a client that had no session. Reason: {}", reason);
+    }
+
     try {
       if (clientChannel != null && clientChannel.isOpen()) {
-        clientChannel.close(); // Close the network channel.
+        clientChannel.close();
       }
     } catch (IOException ex) {
-      // Log, but don't let this stop cleanup.
-      log("Error closing channel during cleanup for reason '" + reason + "': " + ex.getMessage());
-    }
-
-    if (clientSession != null) {
-      log(
-          "Client "
-              + clientSession.getDisplayId()
-              + " (ID: "
-              + clientSession.getPlayerId()
-              + ") connection resources cleaned up. Reason: "
-              + reason);
-      sessionManager.handleClientDisconnect(
-          clientSession); // Notify SessionManager to handle game logic.
-    } else if (clientChannel != null) {
-      // If session was null but channel existed (e.g. error during accept/attach)
-      log(
-          "Cleaned up a client channel ("
-              + clientChannel.hashCode()
-              + ") that had no ClientSession attached. Reason: "
-              + reason);
-    } else {
-      log("Cleanup called but key or channel was null. Reason: " + reason);
-    }
-  }
-
-  /**
-   * Called by ClientSession when it has data in its writeQueue. Signals the selector that this
-   * channel is interested in write operations.
-   */
-  public void registerForWrite(ClientSession client) {
-    if (client == null
-        || client.getChannel() == null
-        || !client.getChannel().isOpen()
-        || selector == null
-        || !selector.isOpen()) {
-      // log("Attempted to register for write on invalid client/channel/selector state.");
-      return;
-    }
-    try {
-      SelectionKey key = client.getChannel().keyFor(selector);
-      if (key != null && key.isValid()) {
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE); // Add write interest.
-        selector.wakeup(); // Wake up selector if it's blocking in select().
-      }
-    } catch (CancelledKeyException e) {
-      // Key got cancelled, client likely disconnected. Cleanup is handled elsewhere.
-      // log("Could not register for write, key cancelled for " + client.getPlayerId());
+      logger.error("Error closing channel during cleanup.", ex);
     }
   }
 
@@ -396,33 +354,47 @@ public class GameServer implements Runnable {
    * Called by ClientSession when its writeQueue is empty. Signals the selector that this channel is
    * no longer interested in write operations (for now).
    */
+  public void registerForWrite(ClientSession client) {
+    if (client == null || client.getChannel() == null || !client.getChannel().isOpen() || selector == null || !selector.isOpen()) {
+      return; // Invalid state, do nothing.
+    }
+    try {
+      SelectionKey key = client.getChannel().keyFor(selector);
+      if (key != null && key.isValid()) {
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE); // Add write interest
+        selector.wakeup(); // Wake up selector if it's blocking
+      }
+    } catch (CancelledKeyException e) {
+      // Key was cancelled, client is likely disconnecting. Cleanup is handled elsewhere.
+      logger.debug("Could not register for write, key cancelled for {}", client.getPlayerId());
+    }
+  }
+
+  /**
+   * Called by a ClientSession when its writeQueue is empty.
+   * This signals the selector that the channel is no longer interested in write operations.
+   */
   public void unregisterForWrite(ClientSession client) {
-    if (client == null
-        || client.getChannel() == null
-        || !client.getChannel().isOpen()
-        || selector == null
-        || !selector.isOpen()) {
+    if (client == null || client.getChannel() == null || !client.getChannel().isOpen() || selector == null || !selector.isOpen()) {
       return;
     }
     try {
       SelectionKey key = client.getChannel().keyFor(selector);
       if (key != null && key.isValid()) {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // Remove write interest.
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE); // Remove write interest
       }
     } catch (CancelledKeyException e) {
-      // log("Could not unregister for write, key already cancelled for " + client.getPlayerId());
+      // Key was cancelled, client is likely disconnecting. Cleanup is handled elsewhere.
+      logger.debug("Could not unregister for write, key cancelled for {}", client.getPlayerId());
     }
   }
 
   // --- Logging Utilities ---
   public void log(String message) {
-    System.out.println("[" + LocalTime.now().format(TIME_FORMATTER) + " SERVER] " + message);
+    logger.info(message);
   }
 
   public void logError(String message, Throwable throwable) {
-    System.err.println("[" + LocalTime.now().format(TIME_FORMATTER) + " SERVER ERROR] " + message);
-    if (throwable != null) {
-      throwable.printStackTrace(System.err); // Keep for now, useful for debugging.
-    }
+    logger.error(message, throwable);
   }
 }

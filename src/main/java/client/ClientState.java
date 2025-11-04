@@ -13,6 +13,7 @@ public enum ClientState {
   SELECTING_HOST_TYPE(true), // Interactive menu
   REQUESTING_CASE_LIST_FOR_HOST(false), // Waits for server response
   SELECTING_HOST_CASE(true), // Interactive menu (after getting cases)
+  SELECTING_HOST_LANGUAGE(true), // NEW: Interactive menu for choosing a language
   SENDING_HOST_REQUEST(false), // Waits for server response
   HOSTING_LOBBY_WAITING(true), // Interactive (chat, 'exit lobby')
 
@@ -32,8 +33,7 @@ public enum ClientState {
   ATTEMPTING_FINAL_EXAM(false), // Host sent "final exam", waiting for first Question DTO
   ANSWERING_FINAL_EXAM_Q(true), // Host received a question, typing answer
   SUBMITTING_EXAM_ANSWER(false), // Host sent an answer, waiting for next Q DTO or Result DTO
-  VIEWING_EXAM_RESULT(
-      true), // Results displayed, user might press Enter to continue (transient state)
+  VIEWING_EXAM_RESULT(true), // Results displayed, user might press Enter to continue (transient state)
 
   // Terminal State
   EXITING(false); // Client is shutting down, not interactive
@@ -64,10 +64,9 @@ public enum ClientState {
     // A waiting state is non-interactive AND not one of the fundamental
     // non-connected or exiting states.
     return !interactive
-        && this != CONNECTING
-        && this != RECONNECTING
-        && this != DISCONNECTED
-        && // DISCONNECTED is interactive (for 'connect'/'quit')
-        this != EXITING;
+            && this != CONNECTING
+            && this != RECONNECTING
+            && this != DISCONNECTED // DISCONNECTED is interactive (for 'connect'/'quit')
+            && this != EXITING;
   }
 }

@@ -12,36 +12,28 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class LookCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
   public LookCommand() {
-    super(true); // Requires case to be started
+    super(true);
   }
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
     Room currentRoom = context.getCurrentRoomForPlayer(getPlayerId());
     if (currentRoom == null) {
-      context.sendResponseToPlayer(
-          getPlayerId(), new TextMessage("Error: You are not in a valid room.", true));
+      context.sendResponseToPlayer(getPlayerId(), new TextMessage("Error: You are not in a valid room.", true));
       return;
     }
 
-    // Get object names in the current room
-    List<String> objectNamesInRoom =
-        currentRoom.getObjects().values().stream()
+    List<String> objectNamesInRoom = currentRoom.getObjects().values().stream()
             .map(GameObject::getName)
             .collect(Collectors.toList());
 
-    // Get occupant names in the current room (excluding the player themselves)
-    // The GameActionContext's getOccupantsDescriptionInRoom should handle this logic
-    // For now, let's assume it returns a list of names directly, or we parse its string.
-    // If context.getOccupantsDescriptionInRoom returns a single string:
     String occupantsString = context.getOccupantsDescriptionInRoom(currentRoom, getPlayerId());
     List<String> occupantNames = new ArrayList<>();
-    if (occupantsString != null
-        && !occupantsString.equalsIgnoreCase("Occupants: None")
-        && occupantsString.startsWith("Occupants: ")) {
+    if (occupantsString != null && !occupantsString.equalsIgnoreCase("Occupants: None") && occupantsString.startsWith("Occupants: ")) {
       String[] names = occupantsString.substring("Occupants: ".length()).split(",\\s*");
       for (String name : names) {
         if (!name.trim().isEmpty()) {
@@ -50,13 +42,10 @@ public class LookCommand extends BaseCommand {
       }
     }
 
-    // Get exits: direction -> roomName
-    Map<String, String> exitsMap =
-        currentRoom.getNeighbors().entrySet().stream()
+    Map<String, String> exitsMap = currentRoom.getNeighbors().entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getName()));
 
-    RoomDescriptionDTO roomDTO =
-        new RoomDescriptionDTO(
+    RoomDescriptionDTO roomDTO = new RoomDescriptionDTO(
             currentRoom.getName(),
             currentRoom.getDescription(),
             objectNamesInRoom,

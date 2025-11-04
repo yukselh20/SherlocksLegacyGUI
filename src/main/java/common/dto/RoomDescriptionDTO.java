@@ -1,5 +1,7 @@
 package common.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -8,19 +10,21 @@ import java.util.List;
 import java.util.Map;
 
 public class RoomDescriptionDTO implements Serializable {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
   private final String name;
   private final String description;
   private final List<String> objectNames;
-  private final List<String> occupantNames; // Includes other players and NPCs
-  private final Map<String, String> exits; // Direction -> RoomName
+  private final List<String> occupantNames;
+  private final Map<String, String> exits;
 
+  @JsonCreator
   public RoomDescriptionDTO(
-      String name,
-      String description,
-      List<String> objectNames,
-      List<String> occupantNames,
-      Map<String, String> exits) {
+          @JsonProperty("name") String name,
+          @JsonProperty("description") String description,
+          @JsonProperty("objectNames") List<String> objectNames,
+          @JsonProperty("occupantNames") List<String> occupantNames,
+          @JsonProperty("exits") Map<String, String> exits) {
     this.name = name;
     this.description = description;
     this.objectNames = objectNames != null ? new ArrayList<>(objectNames) : new ArrayList<>();
@@ -50,22 +54,17 @@ public class RoomDescriptionDTO implements Serializable {
 
   @Override
   public String toString() {
-    // A more detailed toString for debugging or simple client display
     StringBuilder sb = new StringBuilder();
     sb.append("Room: ").append(name).append("\n");
     sb.append(description).append("\n");
-    sb.append("Objects: ")
-        .append(objectNames.isEmpty() ? "None" : String.join(", ", objectNames))
-        .append("\n");
-    sb.append("Occupants: ")
-        .append(occupantNames.isEmpty() ? "None" : String.join(", ", occupantNames))
-        .append("\n");
+    sb.append("Objects: ").append(objectNames.isEmpty() ? "None" : String.join(", ", objectNames)).append("\n");
+    sb.append("Occupants: ").append(occupantNames.isEmpty() ? "None" : String.join(", ", occupantNames)).append("\n");
     sb.append("Exits: ");
     if (exits.isEmpty()) {
       sb.append("None");
     } else {
       exits.forEach((dir, room) -> sb.append(dir).append(" (").append(room).append("), "));
-      if (!exits.isEmpty()) sb.setLength(sb.length() - 2); // remove last comma and space
+      sb.setLength(sb.length() - 2);
     }
     return sb.toString();
   }

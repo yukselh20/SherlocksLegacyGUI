@@ -9,7 +9,7 @@ public class Suspect extends MovableCharacter {
     this.name = name;
     this.statement = statement;
     this.clue = clue;
-  }
+}
 
   public String getName() {
     return name;
@@ -22,4 +22,5 @@ public class Suspect extends MovableCharacter {
   public String getClue() {
     return clue;
   }
+
 }

@@ -1,21 +1,25 @@
 package common.dto;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serial;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
-
 public class JournalEntryDTO implements Serializable {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
   private final String text;
   private final String contributorPlayerId;
-  private final long timestamp; // Still store timestamp for sorting/display
+  private final long timestamp;
 
-  public JournalEntryDTO(String text, String contributorPlayerId, long timestamp) {
+  @JsonCreator
+  public JournalEntryDTO(
+          @JsonProperty("text") String text,
+          @JsonProperty("contributorPlayerId") String contributorPlayerId,
+          @JsonProperty("timestamp") long timestamp) {
     this.text = Objects.requireNonNull(text, "Text cannot be null");
-    this.contributorPlayerId =
-        Objects.requireNonNull(contributorPlayerId, "Contributor ID cannot be null");
+    this.contributorPlayerId = Objects.requireNonNull(contributorPlayerId, "Contributor ID cannot be null");
     this.timestamp = timestamp;
   }
 
@@ -33,32 +37,21 @@ public class JournalEntryDTO implements Serializable {
 
   @Override
   public String toString() {
-    // Keep timestamp in toString for display purposes
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    // Maybe differentiate player notes from discoveries?
-    String prefix =
-        contributorPlayerId.startsWith("Player")
-            ? contributorPlayerId + ":"
-            : contributorPlayerId; // Example
+    String prefix = contributorPlayerId.startsWith("Player") ? contributorPlayerId + ":" : contributorPlayerId;
     return "[" + sdf.format(new Date(timestamp)) + "] " + prefix + " " + text;
   }
 
-  // --- MODIFIED equals ---
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     JournalEntryDTO that = (JournalEntryDTO) o;
-    // Equality based ONLY on text content and who contributed it.
-    // Timestamp is ignored for uniqueness check in the Journal.
-    return Objects.equals(text, that.text)
-        && Objects.equals(contributorPlayerId, that.contributorPlayerId);
+    return Objects.equals(text, that.text) && Objects.equals(contributorPlayerId, that.contributorPlayerId);
   }
 
-  // --- MODIFIED hashCode ---
   @Override
   public int hashCode() {
-    // Hash code MUST use the same fields as equals().
     return Objects.hash(text, contributorPlayerId);
   }
 }

@@ -5,6 +5,9 @@ public class GameObject {
   private String description;
   private String examine; // Detailed examination text
   private String deduce; // Deduction text
+  private String spriteImage; // <-- ADD THIS
+  private int x;              // <-- ADD THIS
+  private int y; 
 
   // Constructor with all fields
   public GameObject(String name, String description, String examine, String deduce) {
@@ -12,7 +15,7 @@ public class GameObject {
     this.description = description;
     this.examine = examine;
     this.deduce = deduce;
-  }
+}
 
   // Getters
   public String getName() {
@@ -35,4 +38,5 @@ public class GameObject {
   public String deduce() {
     return deduce;
   }
+
 }

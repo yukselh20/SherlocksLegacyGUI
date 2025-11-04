@@ -1,22 +1,27 @@
 package common.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 
 public class WatsonHintResponseDTO implements Serializable {
-  private static final long serialVersionUID = 1L;
-  private final String message;
-  private final boolean isActualHint; // True if message is a hint, false if it's a status/error
+    private static final long serialVersionUID = 1L;
+    private final String message;
+    private final boolean isActualHint;
 
-  public WatsonHintResponseDTO(String message, boolean isActualHint) {
-    this.message = message;
-    this.isActualHint = isActualHint;
-  }
+    @JsonCreator
+    public WatsonHintResponseDTO(
+            @JsonProperty("message") String message,
+            @JsonProperty("actualHint") boolean isActualHint) {
+        this.message = message;
+        this.isActualHint = isActualHint;
+    }
 
-  public String getMessage() {
-    return message;
-  }
+    public String getMessage() {
+        return message;
+    }
 
-  public boolean isActualHint() {
-    return isActualHint;
-  }
+    public boolean isActualHint() {
+        return isActualHint;
+    }
 }

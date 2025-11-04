@@ -1,5 +1,7 @@
 package common.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serial;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
@@ -7,12 +9,17 @@ import java.util.Date;
 import java.util.Objects;
 
 public class ChatMessage implements Serializable {
-  @Serial private static final long serialVersionUID = 1L;
-  private final String senderDisplayId; // Player's chosen name or generated ID
+  @Serial
+  private static final long serialVersionUID = 1L;
+  private final String senderDisplayId;
   private final String text;
   private final long timestamp;
 
-  public ChatMessage(String senderDisplayId, String text, long timestamp) {
+  @JsonCreator
+  public ChatMessage(
+          @JsonProperty("senderDisplayId") String senderDisplayId,
+          @JsonProperty("text") String text,
+          @JsonProperty("timestamp") long timestamp) {
     this.senderDisplayId = Objects.requireNonNull(senderDisplayId);
     this.text = Objects.requireNonNull(text);
     this.timestamp = timestamp;

@@ -4,19 +4,16 @@ import common.interfaces.GameActionContext;
 import java.io.Serial;
 
 public class RequestStartCaseCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
   public RequestStartCaseCommand() {
-    super(false); // Can be issued before case is formally started by host
+    super(false);
   }
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
-    // Server-side: GameContextServer will receive this.
-    // It should check if the sender is the guest.
-    // If so, it prompts the host.
-    // If sender is host, or conditions not met, it sends an appropriate TextMessage.
-    context.processRequestStartCase(getPlayerId()); // New method in GameActionContext
+    context.processRequestStartCase(getPlayerId());
   }
 
   @Override

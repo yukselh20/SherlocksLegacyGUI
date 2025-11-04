@@ -7,18 +7,18 @@ import java.io.Serial;
 import java.util.List;
 
 public class TaskCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
   public TaskCommand() {
-    super(true); // Requires case to be started
+    super(true);
   }
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
     TaskList taskList = context.getTaskList();
     if (taskList == null || taskList.getTasks().isEmpty()) {
-      context.sendResponseToPlayer(
-          getPlayerId(), new TextMessage("No tasks available for this case.", false));
+      context.sendResponseToPlayer(getPlayerId(), new TextMessage("No tasks available for this case.", false));
       return;
     }
 
@@ -27,11 +27,7 @@ public class TaskCommand extends BaseCommand {
     for (int i = 0; i < tasks.size(); i++) {
       taskMessage.append((i + 1)).append(". ").append(tasks.get(i)).append("\n");
     }
-
-    // A more DTO-centric way would be to send a TaskListDTO(List<String> tasks)
-    // For now, a single TextMessage:
-    context.sendResponseToPlayer(
-        getPlayerId(), new TextMessage(taskMessage.toString().trim(), false));
+    context.sendResponseToPlayer(getPlayerId(), new TextMessage(taskMessage.toString().trim(), false));
   }
 
   @Override

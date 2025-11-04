@@ -1,11 +1,5 @@
 package server;
 
-import JsonDTO.CaseFile;
-import common.commands.*;
-import common.dto.*;
-import extractors.BuildingExtractor;
-import extractors.GameObjectExtractor;
-import extractors.SuspectExtractor;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,690 +7,396 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * GameSession Manages a single instance of a multiplayer game (typically for 2 players). It holds
- * references to the connected ClientSessions, the specific CaseFile being played, and the
- * GameContextServer which contains the live game state. Handles player joining, leaving, command
- * processing for the session, and chat.
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import common.commands.Command;
+import common.dto.ChatMessage;
+import common.dto.LobbyUpdateDTO;
+import common.dto.ReturnToLobbyDTO;
+import common.dto.TextMessage;
+import JsonDTO.CaseData;
+
 public class GameSession {
+  private static final Logger logger = LoggerFactory.getLogger(GameSession.class);
+  private final String sessionId;
+  private final GameContextServer gameContext;
+  private ClientSession player1;
+  private ClientSession player2;
+  private final ReentrantLock sessionLock = new ReentrantLock();
+  private GameSessionState state;
+  private String gameCode;
+  private final GameSessionManager sessionManager;
+  private final GameServer server;
+  private final CaseData caseFile;
 
-  // --- Core Session Fields ---
-  private final String sessionId; // Unique ID for this game session.
-  private final CaseFile caseFile; // The actual case data DTO.
-  private final GameContextServer gameContext; // Authoritative game state and logic engine.
 
-  private ClientSession player1; // Host player.
-  private ClientSession player2; // Guest player.
-  private final ReentrantLock sessionLock =
-      new ReentrantLock(); // For thread-safe access to session state.
-
-  private GameSessionState
-      state; // Current state of the session (LOADING, WAITING, ACTIVE, ENDED, etc.)
-  private String gameCode; // 5-char code for private games, null if public.
-
-  // --- Manager & Server References ---
-  private final GameSessionManager sessionManager; // To notify about ending, or for save requests.
-  private final GameServer server; // Primarily for logging.
-
-  /**
-   * Constructor for a new GameSession. Initializes session ID, case data, host player, and game
-   * context. Attempts to load all case data into the context.
-   */
-  public GameSession(
-      CaseFile caseFile,
-      ClientSession hostPlayer,
-      boolean isPublic,
-      String assignedGameCode, // <<< MODIFIED: Added assignedGameCode parameter
-      GameSessionManager manager,
-      GameServer server) {
-
+  public GameSession(CaseData caseFile, ClientSession hostPlayer, boolean isPublic, String assignedGameCode, GameSessionManager manager, GameServer server) {
     this.sessionId = UUID.randomUUID().toString();
-    this.caseFile = Objects.requireNonNull(caseFile, "CaseFile DTO cannot be null");
+    this.caseFile = Objects.requireNonNull(caseFile, "CaseData object cannot be null"); // MODIFIED
     this.sessionManager = Objects.requireNonNull(manager, "GameSessionManager cannot be null");
     this.server = Objects.requireNonNull(server, "GameServer cannot be null");
     this.state = GameSessionState.LOADING;
-
     this.player1 = Objects.requireNonNull(hostPlayer, "Host player (player1) cannot be null");
     hostPlayer.setAssociatedGameSession(this);
-
     if (!isPublic) {
-      // For private games, a code MUST be assigned by the manager.
-      this.gameCode =
-          Objects.requireNonNull(
-              assignedGameCode, "Private game session must be created with an assigned game code.");
-      log("Private game session configured with provided code: " + this.gameCode);
+      this.gameCode = Objects.requireNonNull(assignedGameCode, "Private game session must be created with an assigned game code.");
     } else {
-      this.gameCode = null; // Public games don't have a code set this way.
-      log("Public game session created for case: " + this.caseFile.getTitle());
+      this.gameCode = null;
     }
-    // --- END MODIFICATION ---
 
+    // This line now causes the SECOND error, which we will fix next.
+    // We pass `this.caseFile` which is a CaseData object.
     this.gameContext = new GameContextServer(this, this.caseFile, hostPlayer.getPlayerId(), null);
 
     if (!loadCaseDataIntoContext()) {
       this.state = GameSessionState.ERROR;
-      log(
-          "CRITICAL: Failed to load case data for new session "
-              + sessionId
-              + ". Session state: ERROR.");
-      hostPlayer.send(
-          new TextMessage(
-              "Error: Failed to initialize the game data for this case. Session cannot start.",
-              true));
+      log("CRITICAL: Failed to load case data for new session " + sessionId);
+      hostPlayer.send(new TextMessage("Error: Failed to initialize the game data for this case. Session cannot start.", true));
     } else {
       this.state = GameSessionState.WAITING_FOR_PLAYERS;
-      log(
-          "Session created for case '"
-              + this.caseFile.getTitle()
-              + "'. Host: "
-              + hostPlayer.getDisplayId()
-              + ". Waiting for Player 2.");
-      // Send HostGameResponseDTO. The gameCode field will now be correctly populated
-      // with either the assigned code or null.
-      hostPlayer.send(
-          new HostGameResponseDTO(
-              true,
-              "Game hosted. Waiting for opponent..."
-                  + (isPublic ? "" : " Private Code: " + this.gameCode),
-              this.gameCode, // This will be the assigned code or null
-              this.sessionId));
+      log("Session created for case '" + this.caseFile.getTitle() + "'. Host: " + hostPlayer.getDisplayId() + ". Waiting for Player 2.");
     }
   }
 
-  // --- Initialization & Setup ---
+  private void log(String message) {
+    // Formats the message with the session's unique ID for easy tracking in logs
+    logger.info("[SESS:{}] {}", this.sessionId.substring(0, 8), message);
+  }
 
-  /**
-   * Loads all game data (rooms, objects, suspects) from the CaseFile into this session's
-   * GameContextServer. Called during session construction.
-   *
-   * @return true if loading was successful, false otherwise.
-   */
   private boolean loadCaseDataIntoContext() {
     log("Loading case data into context...");
-    gameContext.resetForNewCaseLoad(); // Start fresh.
-
+    gameContext.resetForNewCaseLoad();
     try {
-      if (!BuildingExtractor.loadBuilding(this.caseFile, this.gameContext)) {
+      if (!extractors.BuildingExtractor.loadBuilding(this.caseFile, this.gameContext)) {
         log("Failed to load building data.");
         return false;
       }
-      GameObjectExtractor.loadObjects(this.caseFile, this.gameContext);
-      SuspectExtractor.loadSuspects(
-          this.caseFile, this.gameContext); // Can throw IllegalStateException.
-    } catch (IllegalStateException e) {
-      log("Error loading suspects: " + e.getMessage());
-      return false;
+      extractors.GameObjectExtractor.loadObjects(this.caseFile, this.gameContext);
+      extractors.SuspectExtractor.loadSuspects(this.caseFile, this.gameContext);
     } catch (Exception e) {
       log("Unexpected error during case data loading: " + e.getMessage());
-      server.logError(
-          "Stack trace for unexpected loading error in session " + sessionId, e); // Log full trace.
+      server.logError("Stack trace for unexpected loading error in session " + sessionId, e);
       return false;
     }
-    gameContext.initializePlayerStartingState(); // Set initial positions for players, NPCs.
+    gameContext.initializePlayerStartingState();
     log("Case data loaded successfully.");
     return true;
   }
 
-  // --- Getters ---
-  public String getSessionId() {
-    return sessionId;
-  }
-
-  public String getCaseTitle() {
-    return this.caseFile != null
-        ? this.caseFile.getTitle()
-        : "Unknown Case"; // Handle null caseFile gracefully
-  }
-
-  public String getGameCode() {
-    return gameCode;
-  } // Null for public games.
-
-  public GameSessionState getState() {
-    return state;
-  }
-
-  public void setSessionState(GameSessionState newState) { // Used by GameContextServer
-    sessionLock.lock();
-    try {
-      if (this.state != newState) {
-        log("Session state changing from " + this.state + " to " + newState);
-        this.state = newState;
-      }
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  public GameContextServer getGameContext() {
-    return gameContext;
-  }
-
-  public GameServer getServer() {
-    return server;
-  } // For GameContextServer to log through.
-
-  public ClientSession getPlayer1() {
-    sessionLock.lock();
-    try {
-      return player1;
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  // public ClientSession getPlayer2() { sessionLock.lock(); try { return player2; } finally {
-  // sessionLock.unlock(); } } // If needed publicly
-
-  // --- Player Management ---
-
-  /**
-   * Adds a second player (guest) to this game session.
-   *
-   * @param newPlayer The ClientSession of the player joining.
-   * @return true if player was successfully added, false otherwise (e.g., session full, wrong
-   *     state).
-   */
   public boolean addPlayer(ClientSession newPlayer) {
-    if (newPlayer == null) {
-      log("Attempt to add null player.");
-      return false;
-    }
     sessionLock.lock();
     try {
       if (player2 != null) {
-        log(
-            "Add player "
-                + newPlayer.getDisplayId()
-                + " failed: P2 slot full (current P2: "
-                + player2.getDisplayId()
-                + ").");
-        newPlayer.send(new JoinGameResponseDTO(false, "Session is already full.", null));
+        newPlayer.send(new common.dto.JoinGameResponseDTO(false, "Session is already full.", null));
         return false;
       }
       if (this.state != GameSessionState.WAITING_FOR_PLAYERS) {
-        log(
-            "Add player "
-                + newPlayer.getDisplayId()
-                + " failed: Session not WAITING_FOR_PLAYERS. State: "
-                + this.state);
-        newPlayer.send(
-            new JoinGameResponseDTO(false, "Session not currently accepting new players.", null));
+        newPlayer.send(new common.dto.JoinGameResponseDTO(false, "Session not currently accepting new players.", null));
         return false;
       }
       if (player1 != null && player1.getPlayerId().equals(newPlayer.getPlayerId())) {
-        log(
-            "Add player "
-                + newPlayer.getDisplayId()
-                + " failed: Host cannot join own session as P2.");
-        newPlayer.send(
-            new JoinGameResponseDTO(
-                false, "You cannot join your own game as the second player.", null));
+        newPlayer.send(new common.dto.JoinGameResponseDTO(false, "You cannot join your own game as the second player.", null));
         return false;
       }
-
       player2 = newPlayer;
       newPlayer.setAssociatedGameSession(this);
       log("Player 2 (" + player2.getDisplayId() + ") joined session.");
-
-      // Update GameContextServer with both player IDs and re-init their states.
       this.gameContext.setPlayerIds(player1.getPlayerId(), player2.getPlayerId());
-      this.gameContext.initializePlayerStartingState(); // Ensure both players are properly placed.
 
-      newPlayer.send(
-          new JoinGameResponseDTO(
-              true,
-              "Joined game: " + this.caseFile.getTitle() + " with host " + player1.getDisplayId(),
-              this.sessionId));
-      if (player1 != null) { // Notify host.
-        player1.send(
-            new LobbyUpdateDTO(
-                newPlayer.getDisplayId() + " has joined your game!",
-                getPlayerDisplayIds(),
-                getPlayerActualIds(),
-                player1.getPlayerId(),
-                false));
-      }
-      startGameSession(); // Transition session to ready for 'start case'.
+      newPlayer.send(new common.dto.JoinGameResponseDTO(true, "Joined game: " + this.caseFile.getTitle() + " with host " + player1.getDisplayId(), this.sessionId));
+
+      startGameSession();
       return true;
     } finally {
       sessionLock.unlock();
     }
   }
 
-  /**
-   * Transitions the session state when both players have joined. Sends lobby updates and case
-   * invitation.
-   */
   private void startGameSession() {
-    // Pre-condition: P2 has just joined, session is full.
-    if (!isFull() || this.state != GameSessionState.WAITING_FOR_PLAYERS) {
-      log("startGameSession called prematurely. State: " + this.state + ", Full: " + isFull());
-      return;
-    }
-    setSessionState(GameSessionState.IN_LOBBY_AWAITING_START); // Now ready for 'start case'.
-    log(
-        "Session is now "
-            + this.state
-            + ". Players: "
-            + player1.getDisplayId()
-            + ", "
-            + player2.getDisplayId());
-
-    LobbyUpdateDTO gameReadyMsg =
-        new LobbyUpdateDTO(
-            "Both players are in the lobby: "
-                + player1.getDisplayId()
-                + " and "
-                + player2.getDisplayId()
-                + ".",
-            getPlayerDisplayIds(),
-            getPlayerActualIds(),
+    setSessionState(GameSessionState.IN_LOBBY_AWAITING_START);
+    log("Session is now " + this.state + ". Players: " + player1.getDisplayId() + ", " + player2.getDisplayId());
+    LobbyUpdateDTO gameReadyMsg = new LobbyUpdateDTO(
+            "Both players are in the lobby.",
+            new ArrayList<>(getPlayerDisplayIds()),
+            new ArrayList<>(getPlayerActualIds()),
             (player1 != null ? player1.getPlayerId() : null),
             true);
     broadcast(gameReadyMsg, null);
-
-    broadcast(
-        new TextMessage(
-            "--- Case Invitation ---\n"
-                + caseFile.getInvitation()
-                + "\n\nHost ("
-                + player1.getDisplayId()
-                + ") should type 'start case' to begin.",
-            false),
-        null);
+    broadcast(new TextMessage("--- Case Invitation ---\n" + caseFile.getInvitation() + "\n\nHost (" + player1.getDisplayId() + ") should type 'start case' to begin.", false), null);
   }
 
-  public boolean isFull() {
-    return player1 != null && player2 != null;
+
+  public void handlePlayerDisconnect(ClientSession disconnectedClient) {
+    sessionLock.lock();
+    try {
+      String leavingPlayerId = disconnectedClient.getPlayerId();
+      String leavingPlayerDisplayId = disconnectedClient.getDisplayId();
+      boolean wasP1 = player1 != null && player1.getPlayerId().equals(leavingPlayerId);
+      boolean wasP2 = player2 != null && player2.getPlayerId().equals(leavingPlayerId);
+
+      if (!wasP1 && !wasP2) return;
+
+      log("Player " + leavingPlayerDisplayId + " (ID: " + leavingPlayerId + ") has disconnected.");
+      disconnectedClient.setAssociatedGameSession(null);
+
+      if (wasP1) { // HOST DISCONNECTED
+        log("Host has disconnected. Ending session " + sessionId);
+        if (player2 != null) {
+          player2.send(new TextMessage("The host (" + leavingPlayerDisplayId + ") has disconnected. The session has ended.", false));
+          player2.send(new ReturnToLobbyDTO("Returning to main menu as host has left."));
+          player2.setAssociatedGameSession(null);
+        }
+        sessionManager.endSession(this.sessionId, "Host disconnected.");
+      } else if (wasP2) { // GUEST DISCONNECTED
+        log("Guest has disconnected. Session " + sessionId + " continues for host.");
+        this.player2 = null;
+        if (gameContext != null) {
+          gameContext.setPlayerIds(player1.getPlayerId(), null);
+        }
+        if (this.state == GameSessionState.ACTIVE && player1 != null) {
+          player1.send(new TextMessage(leavingPlayerDisplayId + " has left the game. You may continue your investigation solo.", false));
+        } else if (this.state == GameSessionState.IN_LOBBY_AWAITING_START && player1 != null) {
+          this.state = GameSessionState.WAITING_FOR_PLAYERS;
+          player1.send(new TextMessage(leavingPlayerDisplayId + " has left the lobby. Waiting for a new player...", false));
+          log("Session " + sessionId + " is now back to WAITING_FOR_PLAYERS.");
+        }
+      }
+    } finally {
+      sessionLock.unlock();
+    }
   }
 
+
+  public void playerRequestsExit(String playerId) {
+    sessionLock.lock();
+    try {
+      ClientSession exitingPlayer = getClientSessionById(playerId);
+      if (exitingPlayer == null) {
+        log("PlayerRequestsExit called for a player ID not in this session: " + playerId);
+        return; // Player not found or already gone.
+      }
+
+      log("Player " + exitingPlayer.getDisplayId() + " has requested to exit the game.");
+
+      boolean wasHost = (player1 != null && player1.getPlayerId().equals(playerId));
+
+      // SCENARIO 1: The Host is exiting. The session must end for everyone.
+      if (wasHost) {
+        log("Host is exiting. The session will be terminated.");
+        if (player2 != null) {
+          player2.send(new TextMessage("The host has ended the game session.", false));
+          player2.send(new ReturnToLobbyDTO("Returning to main menu."));
+          player2.setAssociatedGameSession(null);
+        }
+        player1.send(new ReturnToLobbyDTO("You have left the game."));
+        player1.setAssociatedGameSession(null);
+        sessionManager.endSession(this.sessionId, "Host exited the game.");
+      }
+      // SCENARIO 2: The Guest is exiting. The host can continue.
+      else {
+        log("Guest (" + exitingPlayer.getDisplayId() + ") is exiting. Host will remain.");
+        exitingPlayer.send(new ReturnToLobbyDTO("You have left the game."));
+        exitingPlayer.setAssociatedGameSession(null);
+        this.player2 = null;
+        if (gameContext != null) {
+          gameContext.setPlayerIds(player1.getPlayerId(), null);
+        }
+        if (player1 != null) {
+          player1.send(new TextMessage(exitingPlayer.getDisplayId() + " has left the lobby.", false));
+          if (this.state == GameSessionState.ACTIVE) {
+            player1.send(new TextMessage("You may continue your investigation solo.", false));
+          } else if (this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
+            setSessionState(GameSessionState.WAITING_FOR_PLAYERS);
+            log("Session is now back to WAITING_FOR_PLAYERS.");
+            player1.send(new TextMessage("Waiting for a new player...", false));
+            if (this.gameCode == null) { // This session is public
+              sessionManager.relistPublicLobby(this);
+            }
+          }
+        }
+      }
+    } finally {
+      sessionLock.unlock();
+    }
+  }
+
+  public void processCommand(Command command, String playerId) {
+    sessionLock.lock();
+    try {
+      command.setPlayerId(playerId);
+      boolean commandAllowed = false;
+      if (this.state == GameSessionState.ACTIVE) {
+        commandAllowed = true;
+      } else if (this.state == GameSessionState.WAITING_FOR_PLAYERS || this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
+        // Whitelist of commands allowed in any lobby state
+        if (command instanceof common.commands.StartCaseCommand
+                || command instanceof common.commands.RequestStartCaseCommand
+                || command instanceof common.commands.ExitCommand
+                || command instanceof common.commands.HelpCommand
+                || command instanceof common.commands.CancelLobbyCommand) { // Our new command is now included
+          commandAllowed = true;
+        }
+      }
+
+      if (commandAllowed) {
+        gameContext.executeCommand(command);
+      } else {
+        ClientSession sender = getClientSessionById(playerId);
+        if (sender != null) {
+          sender.send(new TextMessage("Command not allowed in current session state: " + this.state, true));
+        }
+      }
+    } finally {
+      sessionLock.unlock();
+    }
+  }
+
+  public void processChatMessage(ChatMessage chatMessage) {
+    sessionLock.lock();
+    try {
+      if (this.state == GameSessionState.ACTIVE || this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
+        broadcast(chatMessage, null);
+      }
+    } finally {
+      sessionLock.unlock();
+    }
+  }
+
+  public void broadcast(Serializable dto, String excludePlayerId) {
+    if (player1 != null && (excludePlayerId == null || !player1.getPlayerId().equals(excludePlayerId))) {
+      player1.send(dto);
+    }
+    if (player2 != null && (excludePlayerId == null || !player2.getPlayerId().equals(excludePlayerId))) {
+      player2.send(dto);
+    }
+  }
+
+  public void endSession(String reason) {
+    this.state = GameSessionState.ENDED_ABANDONED; // Or other end state
+    // Notify players, clean up, etc.
+  }
+
+  public void notifyNameChangeToManagerIfHost(String updatedPlayerId, String newDisplayName) {
+    sessionLock.lock();
+    try {
+      if (player1 != null && player1.getPlayerId().equals(updatedPlayerId) && sessionManager != null && gameCode == null) {
+        sessionManager.updatePublicGameHostName(this.sessionId, newDisplayName);
+      }
+    } finally {
+      sessionLock.unlock();
+    }
+  }
+
+  // --- Getters and Helpers ---
+  public String getSessionId() { return sessionId; }
+  public String getCaseTitle() {
+    return caseFile.getTitle();
+  }
+  public String getGameCode() { return gameCode; }
+  public GameSessionState getState() { return state; }
+  public void setSessionState(GameSessionState state) { this.state = state; }
+  public GameContextServer getGameContext() { return gameContext; }
+  public GameServer getServer() { return server; }
+  public ClientSession getPlayer1() { return player1; }
+  public boolean isFull() { return player1 != null && player2 != null; }
   public List<String> getPlayerDisplayIds() {
-    /* ... (as before) ... */
     List<String> ids = new ArrayList<>();
     if (player1 != null) ids.add(player1.getDisplayId());
     if (player2 != null) ids.add(player2.getDisplayId());
     return ids;
   }
-
-  private List<String> getPlayerActualIds() {
-    /* ... (as before) ... */
+  public List<String> getPlayerActualIds() {
     List<String> ids = new ArrayList<>();
     if (player1 != null) ids.add(player1.getPlayerId());
     if (player2 != null) ids.add(player2.getPlayerId());
     return ids;
   }
-
-  /**
-   * Handles a client disconnecting from the server (e.g., socket closed). Called by
-   * GameSessionManager, which is called by GameServer.
-   */
-  public void handlePlayerDisconnect(ClientSession disconnectedClient) {
-    /* ... (as before, ensure LobbyUpdateDTO is correct) ... */
-    if (disconnectedClient == null) return;
-    sessionLock.lock();
-    try {
-      String leavingPlayerDisplayId = disconnectedClient.getDisplayId();
-      String leavingPlayerId = disconnectedClient.getPlayerId();
-      boolean wasP1 = player1 != null && player1.getPlayerId().equals(leavingPlayerId);
-      boolean wasP2 = player2 != null && player2.getPlayerId().equals(leavingPlayerId);
-
-      if (!wasP1 && !wasP2) return; // Not in this session.
-
-      log("Player " + leavingPlayerDisplayId + " (ID: " + leavingPlayerId + ") disconnected.");
-      disconnectedClient.setAssociatedGameSession(null);
-
-      if (wasP1) player1 = null;
-      if (wasP2) player2 = null;
-      gameContext.setPlayerIds(
-          player1 != null ? player1.getPlayerId() : null,
-          player2 != null ? player2.getPlayerId() : null);
-
-      if (this.state == GameSessionState.ACTIVE
-          || this.state == GameSessionState.WAITING_FOR_PLAYERS
-          || this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
-        this.state = GameSessionState.ENDED_ABANDONED;
-        ClientSession remainingPlayer = (player1 != null) ? player1 : player2;
-        if (remainingPlayer != null) {
-          remainingPlayer.send(
-              new LobbyUpdateDTO(
-                  leavingPlayerDisplayId + " left. Session ended.",
-                  getPlayerDisplayIds(),
-                  getPlayerActualIds(),
-                  (player1 != null ? player1.getPlayerId() : null),
-                  false));
-          remainingPlayer.send(new ReturnToLobbyDTO("Opponent disconnected. Session ended."));
-          remainingPlayer.setAssociatedGameSession(null);
-        }
-        sessionManager.endSession(
-            this.sessionId, "Player " + leavingPlayerDisplayId + " disconnected.");
-      } else {
-        sessionManager.endSession(
-            this.sessionId, "Player disconnected during state: " + this.state);
-      }
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  /**
-   * Handles a player gracefully exiting via the 'exit' command. Called by GameContextServer when an
-   * ExitCommand is processed.
-   */
-  public void playerRequestsExit(String playerId) {
-    /* ... (as before, ensure LobbyUpdateDTO is correct) ... */
-    sessionLock.lock();
-    try {
-      ClientSession exitingPlayer = getClientSessionById(playerId);
-      if (exitingPlayer == null) {
-        return;
-      }
-      log("Player " + exitingPlayer.getDisplayId() + " requests to exit.");
-
-      this.state = GameSessionState.ENDED_ABANDONED;
-      exitingPlayer.send(new TextMessage("You have left the game session.", false));
-      exitingPlayer.send(new ReturnToLobbyDTO("You have exited the game."));
-      exitingPlayer.setAssociatedGameSession(null);
-
-      ClientSession otherPlayer = getOtherPlayer(playerId);
-      if (otherPlayer != null) {
-        List<String> displayIdsForOther = new ArrayList<>();
-        displayIdsForOther.add(otherPlayer.getDisplayId());
-        List<String> actualIdsForOther = new ArrayList<>();
-        actualIdsForOther.add(otherPlayer.getPlayerId());
-        String hostIdForOther =
-            (player1 == otherPlayer)
-                ? otherPlayer.getPlayerId()
-                : ((player2 == otherPlayer)
-                    ? null
-                    : this.player1 != null ? this.player1.getPlayerId() : null);
-
-        otherPlayer.send(
-            new LobbyUpdateDTO(
-                exitingPlayer.getDisplayId() + " exited. Session ended.",
-                displayIdsForOther,
-                actualIdsForOther,
-                hostIdForOther,
-                false));
-        otherPlayer.send(
-            new ReturnToLobbyDTO(exitingPlayer.getDisplayId() + " exited. Session ended."));
-        otherPlayer.setAssociatedGameSession(null);
-      }
-
-      if (player1 == exitingPlayer) player1 = null;
-      if (player2 == exitingPlayer) player2 = null;
-      gameContext.setPlayerIds(
-          player1 != null ? player1.getPlayerId() : null,
-          player2 != null ? player2.getPlayerId() : null);
-
-      sessionManager.endSession(
-          this.sessionId, "Player " + exitingPlayer.getDisplayId() + " exited.");
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  // --- Command & Message Processing ---
-
-  /**
-   * Processes a command received from a client in this session. Gates commands based on current
-   * session state. Delegates execution to GameContextServer.
-   */
-  public void processCommand(Command command, String playerId) {
-    if (command == null || playerId == null) {
-      log("Error: Null command or playerId in processCommand for session " + sessionId);
-      return;
-    }
-    sessionLock.lock();
-    try {
-      command.setPlayerId(playerId);
-      boolean commandAllowed = false;
-      String commandSimpleName = command.getClass().getSimpleName().replace("Command", "");
-
-      log(
-          "Attempting to process command "
-              + commandSimpleName
-              + " for player "
-              + playerId
-              + " in session "
-              + sessionId
-              + " (Current Session State: "
-              + this.state
-              + ")");
-
-      if (this.state == GameSessionState.ACTIVE) {
-        commandAllowed = true; // Most game commands allowed.
-      } else if (this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
-        // Both players are here, waiting for 'start case' or managing lobby.
-        if (command instanceof StartCaseCommand
-            || command instanceof RequestStartCaseCommand
-            || command instanceof ExitCommand
-            || // Host or Guest can exit this lobby state.
-            command instanceof HelpCommand) {
-          commandAllowed = true;
-        }
-      } else if (this.state == GameSessionState.WAITING_FOR_PLAYERS) {
-        // Only host (player1) is in this session, waiting for player2.
-        // Host should be able to exit/cancel their own lobby.
-        if (command instanceof ExitCommand
-            && player1 != null
-            && player1.getPlayerId().equals(playerId)) {
-          commandAllowed = true; // Host can exit their own waiting lobby.
-        } else if (command instanceof HelpCommand) { // Allow help for host.
-          commandAllowed = true;
-        }
-        // Other commands like StartCase are not yet relevant.
-      }
-      // Consider other states like LOADING, ERROR, ENDED_* if any commands are valid there.
-
-      if (!commandAllowed) {
-        ClientSession sender = getClientSessionById(playerId);
-        String denialMessage =
-            "Command '"
-                + commandSimpleName
-                + "' is not allowed in the current session state: "
-                + this.state;
-        if (sender != null) {
-          sender.send(new TextMessage(denialMessage, true));
-        }
-        log(denialMessage + " (Player: " + playerId + ")");
-        return;
-      }
-
-      log("Command " + commandSimpleName + " allowed. Executing via GameContextServer...");
-      gameContext.executeCommand(command);
-
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  /** Processes a chat message, broadcasting it to session members. */
-  public void processChatMessage(ChatMessage chatMessage) {
-    /* ... (as before) ... */
-    if (chatMessage == null) return;
-    sessionLock.lock();
-    try {
-      // Allow chat if session is WAITING (and full), IN_LOBBY_AWAITING_START, or ACTIVE
-      if (this.state == GameSessionState.ACTIVE
-          || this.state == GameSessionState.IN_LOBBY_AWAITING_START
-          || (this.state == GameSessionState.WAITING_FOR_PLAYERS && isFull())) {
-        log("Chat: <" + chatMessage.getSenderDisplayId() + "> " + chatMessage.getText());
-        broadcast(chatMessage, null); // Send to all, including sender.
-      } else {
-        ClientSession sender = getClientSessionByDisplayId(chatMessage.getSenderDisplayId());
-        if (sender != null)
-          sender.send(
-              new TextMessage("Chat not available in current session state: " + this.state, true));
-      }
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  /** Broadcasts a Serializable DTO to players in this session. */
-  public void broadcast(Serializable dto, String excludePlayerId) {
-    /* ... (as before) ... */
-    sessionLock.lock();
-    try {
-      if (player1 != null && (!player1.getPlayerId().equals(excludePlayerId))) {
-        player1.send(dto);
-      }
-      if (player2 != null && (!player2.getPlayerId().equals(excludePlayerId))) {
-        player2.send(dto);
-      }
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  // --- Utility & Helper Methods ---
   public ClientSession getClientSessionById(String playerId) {
-    /* ... (as before) ... */
     if (playerId == null) return null;
-    sessionLock.lock(); // Lock when accessing shared player1/player2
-    try {
-      if (player1 != null && player1.getPlayerId().equals(playerId)) return player1;
-      if (player2 != null && player2.getPlayerId().equals(playerId)) return player2;
-      return null;
-    } finally {
-      sessionLock.unlock();
-    }
+    if (player1 != null && player1.getPlayerId().equals(playerId)) return player1;
+    if (player2 != null && player2.getPlayerId().equals(playerId)) return player2;
+    return null;
   }
-
-  private ClientSession getClientSessionByDisplayId(String displayId) {
-    /* ... (as before) ... */
-    if (displayId == null) return null;
-    sessionLock.lock();
-    try {
-      if (player1 != null && player1.getDisplayId().equals(displayId)) return player1;
-      if (player2 != null && player2.getDisplayId().equals(displayId)) return player2;
-      return null;
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
   public ClientSession getOtherPlayer(String currentPlayerId) {
-    /* ... (as before) ... */
     if (currentPlayerId == null) return null;
-    sessionLock.lock();
-    try {
-      if (player1 != null && player1.getPlayerId().equals(currentPlayerId))
-        return player2; // Can be null
-      if (player2 != null && player2.getPlayerId().equals(currentPlayerId))
-        return player1; // Can be null
-      return null;
-    } finally {
+    if (player1 != null && player1.getPlayerId().equals(currentPlayerId)) return player2;
+    if (player2 != null && player2.getPlayerId().equals(currentPlayerId)) return player1;
+    return null;
+  }
+
+
+
+public void playerCancelsLobby(String playerId) {
+  sessionLock.lock();
+  try {
+      // First, verify this command is valid for the current state.
+      if (this.state != GameSessionState.WAITING_FOR_PLAYERS
+              && this.state != GameSessionState.IN_LOBBY_AWAITING_START) {
+          ClientSession player = getClientSessionById(playerId);
+          if (player != null) {
+              player.send(new TextMessage("Error: The 'cancel' command can only be used in a pre-game lobby.", true));
+          }
+          return;
+      }
+
+      ClientSession cancellingPlayer = getClientSessionById(playerId);
+      if (cancellingPlayer == null) {
+          return; // Player already gone.
+      }
+
+      boolean isHost = player1 != null && player1.equals(cancellingPlayer);
+
+      // --- SCENARIO 1: HOST is cancelling. ---
+      // The entire session ends for everyone.
+      if (isHost) {
+          log("Host is cancelling the lobby. Session will be terminated.");
+
+          // Notify the guest (if they exist) that the session is over.
+          if (player2 != null) {
+              player2.send(new TextMessage("The host has cancelled the lobby.", false));
+              player2.send(new ReturnToLobbyDTO("Returning to main menu."));
+              player2.setAssociatedGameSession(null);
+          }
+
+          // Notify the host themselves.
+          player1.send(new ReturnToLobbyDTO("You have left the lobby."));
+          player1.setAssociatedGameSession(null);
+
+          // Tell the manager to destroy this session object.
+          sessionManager.endSession(this.sessionId, "Lobby cancelled by host.");
+
+      }
+      // --- SCENARIO 2: GUEST is cancelling. ---
+      // The host remains and the lobby becomes available again.
+      else {
+          log("Guest (" + cancellingPlayer.getDisplayId() + ") is leaving the lobby. Host will remain.");
+
+          // Notify the guest they are returning to the menu.
+          cancellingPlayer.send(new ReturnToLobbyDTO("You have left the lobby."));
+          cancellingPlayer.setAssociatedGameSession(null);
+
+          // Remove the guest from the session state.
+          this.player2 = null;
+          if (gameContext != null) {
+              gameContext.setPlayerIds(player1.getPlayerId(), null);
+          }
+
+          // Notify the host and revert the session state.
+          if (player1 != null) {
+              setSessionState(GameSessionState.WAITING_FOR_PLAYERS);
+              log("Session is now back to WAITING_FOR_PLAYERS.");
+              player1.send(new TextMessage(cancellingPlayer.getDisplayId() + " has left the lobby. Waiting for a new player...", false));
+              
+              // If it was a public game, re-list it in the manager.
+              if (this.gameCode == null) {
+                  sessionManager.relistPublicLobby(this);
+              }
+          }
+      }
+  } finally {
       sessionLock.unlock();
-    }
   }
+}
 
-  /**
-   * Finalizes the session, sends end messages, and prepares for removal by the manager. Called by
-   * GameSessionManager or internally (e.g. player disconnect/exit).
-   */
-  public void endSession(String reason) {
-    /* ... (as before, ensure LobbyUpdateDTO is correct) ... */
-    sessionLock.lock();
-    try {
-      if (this.state == GameSessionState.ENDED_ABANDONED
-          || this.state == GameSessionState.ENDED_NORMAL
-          || this.state == GameSessionState.ERROR) {
-        return; // Already ended.
-      }
-      GameSessionState prevState = this.state;
-      this.state = GameSessionState.ENDED_NORMAL; // Default unless specified
-      if (reason.toLowerCase().contains("abandoned")
-          || reason.toLowerCase().contains("disconnect")
-          || reason.toLowerCase().contains("exit")) {
-        this.state = GameSessionState.ENDED_ABANDONED;
-      }
-      log("Session transitioning from " + prevState + " to " + this.state + ". Reason: " + reason);
 
-      List<String> displayIds = getPlayerDisplayIds();
-      List<String> actualIds = getPlayerActualIds();
-      String hostId =
-          (player1 != null && player1.getPlayerId() != null)
-              ? player1.getPlayerId()
-              : // If P1 was host
-              (player2 != null
-                      && player2.getPlayerId() != null
-                      && actualIds.contains(player2.getPlayerId())
-                  ? player2.getPlayerId()
-                  : null); // Fallback if P1 left and P2 was considered host
-
-      LobbyUpdateDTO endMsg =
-          new LobbyUpdateDTO(
-              "Session '" + this.caseFile.getTitle() + "' ended: " + reason,
-              displayIds,
-              actualIds,
-              hostId,
-              false);
-      broadcast(endMsg, null); // Notify any remaining connected clients.
-
-      // Clear associations
-      if (player1 != null) {
-        player1.setAssociatedGameSession(null);
-        player1 = null;
-      }
-      if (player2 != null) {
-        player2.setAssociatedGameSession(null);
-        player2 = null;
-      }
-      gameContext.setPlayerIds(null, null); // Inform context players are gone.
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  /**
-   * If the player whose name changed is the host (player1) of this session, and this session is
-   * currently a public lobby, this method notifies the GameSessionManager to update its public
-   * listing information with the new host display name. Called by GameContextServer after a
-   * successful name change.
-   *
-   * @param updatedPlayerId The ID of the player whose name was just updated.
-   * @param newDisplayName The new display name of that player.
-   */
-  public void notifyNameChangeToManagerIfHost(String updatedPlayerId, String newDisplayName) {
-    sessionLock.lock();
-    try {
-      // Check if the updated player is indeed player1 (our designated host)
-      // and if the session manager reference is valid.
-      if (player1 != null
-          && player1.getPlayerId().equals(updatedPlayerId)
-          && sessionManager != null) {
-        // Also, only bother updating the manager if this session *was* a public lobby.
-        // A private game's host name change doesn't affect public listings.
-        // We can check if gameCode is null (meaning it's public).
-        if (this.gameCode == null) { // It's a public game
-          // And it should ideally still be in a state where it *could* be listed
-          // (e.g., WAITING_FOR_PLAYERS). If it's already ACTIVE, the lobby listing is gone.
-          // However, GameSessionManager.updatePublicGameHostName can handle checking if it's still
-          // in its publicLobbiesById map.
-          log(
-              "Host "
-                  + updatedPlayerId
-                  + " changed name to "
-                  + newDisplayName
-                  + ". Notifying manager to update public lobby info if applicable.");
-          sessionManager.updatePublicGameHostName(this.sessionId, newDisplayName);
-        }
-      }
-    } finally {
-      sessionLock.unlock();
-    }
-  }
-
-  /** Internal logging helper, prefixes with session ID. */
-  private void log(String message) {
-    String substring = sessionId.substring(0, Math.min(8, sessionId.length()));
-    if (this.server != null) {
-      this.server.log("[SESS:" + substring + "] " + message);
-    } else {
-      System.out.println("[SESS_NO_SERVER_LOG:" + substring + "] " + message);
-    }
-  }
 }

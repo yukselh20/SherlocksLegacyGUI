@@ -1,15 +1,19 @@
 package common.commands;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import common.dto.JoinPublicGameRequestDTO;
 import common.interfaces.GameActionContext;
 import java.io.Serial;
 
 public class JoinPublicGameCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
-  private final JoinPublicGameRequestDTO payload; // Store the request DTO
+  @Serial
+  private static final long serialVersionUID = 1L;
+  private final JoinPublicGameRequestDTO payload;
 
-  public JoinPublicGameCommand(JoinPublicGameRequestDTO payload) {
-    super(false); // Does not require case started
+  @JsonCreator
+  public JoinPublicGameCommand(@JsonProperty("payload") JoinPublicGameRequestDTO payload) {
+    super(false);
     if (payload == null) {
       throw new IllegalArgumentException("Payload cannot be null for JoinPublicGameCommand.");
     }
@@ -22,17 +26,7 @@ public class JoinPublicGameCommand extends BaseCommand {
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
-    // Server-side logic: GameSessionManager receives this command, extracts the sessionId from
-    // payload,
-    // finds the public lobby, attempts to add the player (identified by getPlayerId()),
-    // and sends back a JoinGameResponseDTO.
-    // This command object itself doesn't do much beyond carrying the payload.
-    System.out.println(
-        "Server received JoinPublicGameCommand for session: "
-            + payload.getSessionId()
-            + " from player: "
-            + getPlayerId());
-    // Actual processing happens in GameSessionManager.processLobbyCommand
+    System.out.println("Server received JoinPublicGameCommand for session: " + payload.getSessionId() + " from player: " + getPlayerId());
   }
 
   @Override

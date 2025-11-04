@@ -1,6 +1,7 @@
 package server;
 
 import Core.*;
+import Core.util.RankEvaluator;
 import JsonDTO.CaseFile;
 import common.commands.Command;
 import common.commands.InitiateFinalExamCommand;
@@ -11,13 +12,15 @@ import common.interfaces.GameContext;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import JsonDTO.CaseData;
 
 public class GameContextServer implements GameContext, GameActionContext {
 
-  private final GameSession gameSession; // Reference back to the session for communication
-  private final CaseFile
-      selectedCase; // Made final as it shouldn't change post-construction for this context
+  private static final Logger logger = LoggerFactory.getLogger(GameContextServer.class);
 
+  private final GameSession gameSession; // Reference back to the session for communication
   // Player specific state - managed by player IDs
   private Detective player1Detective;
   private Detective player2Detective;
@@ -42,11 +45,14 @@ public class GameContextServer implements GameContext, GameActionContext {
   private List<CaseFile.ExamQuestion> currentExamQuestionsList;
   private Map<Integer, String> player1ExamAnswersMap; // Assuming player1 (host) submits answers
   private int currentExamQuestionIndex;
+  private final CaseData selectedCase;
+
+
 
   public GameContextServer(
-      GameSession gameSession, CaseFile selectedCase, String p1Id, String p2Id) {
+          GameSession gameSession, CaseData selectedCase, String p1Id, String p2Id) {
     this.gameSession = Objects.requireNonNull(gameSession, "GameSession cannot be null");
-    this.selectedCase = Objects.requireNonNull(selectedCase, "SelectedCase cannot be null");
+    this.selectedCase = Objects.requireNonNull(selectedCase, "SelectedCase (CaseData) cannot be null");
     // Player IDs can be null initially if P2 hasn't joined when context is first created by
     // GameSession constructor
     this.player1Id = p1Id;
@@ -77,18 +83,18 @@ public class GameContextServer implements GameContext, GameActionContext {
       }
       // *** ADDED/MODIFIED: Ensure P2's room is set if game is ready ***
       if (this.selectedCase != null
-          && this.selectedCase.getStartingRoom() != null
-          && this.player2Detective != null) {
+              && this.selectedCase.getStartingRoom() != null
+              && this.player2Detective != null) {
         Room startingRoom = getRoomByName(this.selectedCase.getStartingRoom());
         if (startingRoom != null) {
           this.player2Detective.setCurrentRoom(startingRoom);
           logGameMessage(
-              "Player 2 (" + p2Id + ") position set to starting room: " + startingRoom.getName());
+                  "Player 2 (" + p2Id + ") position set to starting room: " + startingRoom.getName());
         } else {
           logGameMessage(
-              "Warning: Could not set starting room for Player 2 ("
-                  + p2Id
-                  + ") upon ID set - starting room not found.");
+                  "Warning: Could not set starting room for Player 2 ("
+                          + p2Id
+                          + ") upon ID set - starting room not found.");
         }
       }
     } else {
@@ -123,7 +129,7 @@ public class GameContextServer implements GameContext, GameActionContext {
     } else {
       this.watson = new DoctorWatson(new ArrayList<>()); // Watson with no hints
       logGameMessage(
-          "Warning: No Watson hints found in selected case '" + selectedCase.getTitle() + "'.");
+              "Warning: No Watson hints found in selected case '" + selectedCase.getTitle() + "'.");
     }
 
     if (player1Detective != null) player1Detective.resetForNewCase();
@@ -133,24 +139,24 @@ public class GameContextServer implements GameContext, GameActionContext {
   public void initializePlayerStartingState() {
     if (selectedCase.getStartingRoom() == null) {
       logGameMessage(
-          "CRITICAL Error: Cannot initialize player state, selected case has no startingRoom defined.");
+              "CRITICAL Error: Cannot initialize player state, selected case has no startingRoom defined.");
       gameSession.endSession(
-          "Configuration error: No starting room defined."); // End session if critical
+              "Configuration error: No starting room defined."); // End session if critical
       return;
     }
     Room startingRoom = getRoomByName(selectedCase.getStartingRoom());
     if (startingRoom == null) {
       logGameMessage(
-          "CRITICAL Error: Starting room '"
-              + selectedCase.getStartingRoom()
-              + "' (defined in case) not found after loading rooms.");
+              "CRITICAL Error: Starting room '"
+                      + selectedCase.getStartingRoom()
+                      + "' (defined in case) not found after loading rooms.");
       // Attempt to use any room as a fallback, but this is a severe config issue.
       if (!rooms.isEmpty()) {
         startingRoom = rooms.values().iterator().next();
         logGameMessage(
-            "Warning: Using first available room '"
-                + startingRoom.getName()
-                + "' as fallback starting room.");
+                "Warning: Using first available room '"
+                        + startingRoom.getName()
+                        + "' as fallback starting room.");
       } else {
         logGameMessage("CRITICAL Error: No rooms loaded at all. Cannot set starting room.");
         gameSession.endSession("Configuration error: No rooms loaded."); // End session
@@ -177,13 +183,13 @@ public class GameContextServer implements GameContext, GameActionContext {
       final Room finalStartingRoom = startingRoom; // For lambda
       for (Suspect suspect : this.suspects) {
         List<Room> validSuspectStarts =
-            allRoomsList.stream()
-                .filter(
-                    r ->
-                        !r.getName()
-                            .equalsIgnoreCase(
-                                finalStartingRoom.getName())) // Try not to start in player room
-                .collect(Collectors.toList());
+                allRoomsList.stream()
+                        .filter(
+                                r ->
+                                        !r.getName()
+                                                .equalsIgnoreCase(
+                                                        finalStartingRoom.getName())) // Try not to start in player room
+                        .collect(Collectors.toList());
         if (!validSuspectStarts.isEmpty()) {
           suspect.setCurrentRoom(validSuspectStarts.get(random.nextInt(validSuspectStarts.size())));
         } else { // Fallback if only one room or all rooms are starting room
@@ -194,8 +200,8 @@ public class GameContextServer implements GameContext, GameActionContext {
   }
 
   private void logGameMessage(String message) {
-    // Uses the GameSession's reference to GameServer for logging.
-    this.gameSession.getServer().log("[SESS_CTX:" + gameSession.getSessionId() + "] " + message);
+    // This now uses the GameSession's getSessionId() to add context to the log message.
+    logger.info("[SESS_CTX:{}] {}", gameSession.getSessionId(), message);
   }
 
   // --- GameContext Implementation (for Extractors) ---
@@ -223,7 +229,8 @@ public class GameContextServer implements GameContext, GameActionContext {
 
   @Override
   public void logLoadingMessage(String message) {
-    logGameMessage("[LOADER] " + message);
+    // We can differentiate loader messages with a specific marker
+    logger.info("[LOADER] {}", message);
   }
 
   @Override
@@ -259,16 +266,16 @@ public class GameContextServer implements GameContext, GameActionContext {
 
     if (started) {
       logGameMessage(
-          "Case '"
-              + (selectedCase != null ? selectedCase.getTitle() : "Unknown")
-              + "' is being started.");
+              "Case '"
+                      + (selectedCase != null ? selectedCase.getTitle() : "Unknown")
+                      + "' is being started.");
 
       // *** NOTIFY GameSession TO UPDATE ITS STATE ***
       if (this.gameSession != null) {
         this.gameSession.setSessionState(GameSessionState.ACTIVE); // New method in GameSession
       } else {
         logGameMessage(
-            "CRITICAL ERROR: gameSession is null in GameContextServer. Cannot update session state.");
+                "CRITICAL ERROR: gameSession is null in GameContextServer. Cannot update session state.");
         // This would be a major issue.
       }
       // *** END NOTIFICATION ***
@@ -276,9 +283,9 @@ public class GameContextServer implements GameContext, GameActionContext {
       broadcastInitialCaseDetails(); // Now broadcast all the initial game data
     } else {
       logGameMessage(
-          "Case '"
-              + (selectedCase != null ? selectedCase.getTitle() : "Unknown")
-              + "' has been stopped/reset (caseStarted=false).");
+              "Case '"
+                      + (selectedCase != null ? selectedCase.getTitle() : "Unknown")
+                      + "' has been stopped/reset (caseStarted=false).");
     }
   }
 
@@ -286,7 +293,7 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (selectedCase == null) {
       logGameMessage("Error: Cannot broadcast initial case details, selectedCase is null.");
       broadcastToSession(
-          new TextMessage("Critical error: Case data missing, cannot start.", true), null);
+              new TextMessage("Critical error: Case data missing, cannot start.", true), null);
       return;
     }
 
@@ -304,7 +311,7 @@ public class GameContextServer implements GameContext, GameActionContext {
     // 2. Broadcast Case Description
     logGameMessage("Broadcasting case description...");
     broadcastToSession(
-        new TextMessage("--- Case Description ---\n" + selectedCase.getDescription(), false), null);
+            new TextMessage("--- Case Description ---\n" + selectedCase.getDescription(), false), null);
 
     // 3. Broadcast Tasks
     logGameMessage("Broadcasting tasks...");
@@ -319,16 +326,53 @@ public class GameContextServer implements GameContext, GameActionContext {
       broadcastToSession(new TextMessage("No tasks available for this case.", false), null);
     }
 
+    logger.info("[SESS_CTX:{}] Broadcasting ranking criteria...", gameSession.getSessionId());
+    List<CaseFile.RankTierData> tiers = selectedCase.getRankingTiers();
+    if (tiers != null && !tiers.isEmpty()) {
+      StringBuilder rankMessage = new StringBuilder("--- Rank Evaluation ---\n");
+      rankMessage.append("Your final rank will be determined by the number of 'deduce' commands used:\n");
+
+      tiers.sort(Comparator.comparingInt(CaseFile.RankTierData::getMaxDeductions));
+
+      // Use a final, single-element array as a mutable container
+      final int[] lastMax = { -1 }; // Start at -1 to handle a range starting at 0
+
+      for (CaseFile.RankTierData tier : tiers) {
+        if (tier.isDefaultRank()) continue;
+
+        int lowerBound = lastMax[0] + 1;
+        int upperBound = tier.getMaxDeductions();
+        String range;
+
+        if (lowerBound > upperBound) continue;
+        if (lowerBound == upperBound) {
+          range = String.valueOf(lowerBound);
+        } else {
+          range = lowerBound + "-" + upperBound;
+        }
+
+        rankMessage.append(String.format("  - %-20s: %s deductions\n", tier.getRankName(), range));
+        lastMax[0] = upperBound; // Modify the content of the array
+      }
+
+      // This lambda can now safely access the final 'lastMax' array reference
+      tiers.stream().filter(CaseFile.RankTierData::isDefaultRank).findFirst().ifPresent(tier -> {
+        rankMessage.append(String.format("  - %-20s: %d+ deductions\n", tier.getRankName(), lastMax[0] + 1));
+      });
+
+      broadcastToSession(new TextMessage(rankMessage.toString().trim(), false), null);
+    }
+
     // 4. Broadcast Starting Room Details
     // Both players start in the same room defined by the case.
     // Get the starting room based on player1 (could be player2, it's the same initial room for the
     // case)
     Room startingRoom;
     if (player1Detective != null
-        && player1Detective.getCurrentRoom() != null) { // Check if P1 detective and room are set
+            && player1Detective.getCurrentRoom() != null) { // Check if P1 detective and room are set
       startingRoom = player1Detective.getCurrentRoom();
     } else if (player2Detective != null
-        && player2Detective.getCurrentRoom() != null) { // Fallback to P2 if P1 not fully init
+            && player2Detective.getCurrentRoom() != null) { // Fallback to P2 if P1 not fully init
       startingRoom = player2Detective.getCurrentRoom();
     } else {
       // Fallback if detective rooms aren't set yet by initializePlayerStartingState
@@ -343,62 +387,62 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (startingRoom != null) {
       logGameMessage("Broadcasting starting location: " + startingRoom.getName());
       broadcastToSession(
-          new TextMessage(
-              "\nYou are now at the starting location: " + startingRoom.getName(), false),
-          null);
+              new TextMessage(
+                      "\nYou are now at the starting location: " + startingRoom.getName(), false),
+              null);
 
       // Create one DTO for the room and send it to both.
       // The occupants list will be from the server's perspective of who is in that room.
       List<String> objectNames =
-          startingRoom.getObjects().values().stream()
-              .map(GameObject::getName)
-              .collect(Collectors.toList());
+              startingRoom.getObjects().values().stream()
+                      .map(GameObject::getName)
+                      .collect(Collectors.toList());
 
       List<String> occupantNamesForBroadcast = new ArrayList<>();
       // Player 1 (if in starting room - should be)
       if (player1Detective != null
-          && player1Detective.getCurrentRoom() != null
-          && player1Detective.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
+              && player1Detective.getCurrentRoom() != null
+              && player1Detective.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
         ClientSession p1Session = gameSession.getClientSessionById(player1Id);
         occupantNamesForBroadcast.add(p1Session != null ? p1Session.getDisplayId() : "Player 1");
       }
       // Player 2 (if in starting room - should be)
       if (player2Detective != null
-          && player2Detective.getCurrentRoom() != null
-          && player2Detective.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
+              && player2Detective.getCurrentRoom() != null
+              && player2Detective.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
         ClientSession p2Session = gameSession.getClientSessionById(player2Id);
         occupantNamesForBroadcast.add(p2Session != null ? p2Session.getDisplayId() : "Player 2");
       }
       // NPCs in starting room
       for (Suspect s : suspects) {
         if (s.getCurrentRoom() != null
-            && s.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
+                && s.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
           occupantNamesForBroadcast.add(s.getName());
         }
       }
       if (watson != null
-          && watson.getCurrentRoom() != null
-          && watson.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
+              && watson.getCurrentRoom() != null
+              && watson.getCurrentRoom().getName().equalsIgnoreCase(startingRoom.getName())) {
         occupantNamesForBroadcast.add("Dr. Watson");
       }
 
       Map<String, String> exits =
-          startingRoom.getNeighbors().entrySet().stream()
-              .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getName()));
+              startingRoom.getNeighbors().entrySet().stream()
+                      .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getName()));
       RoomDescriptionDTO initialRoomDTO =
-          new RoomDescriptionDTO(
-              startingRoom.getName(),
-              startingRoom.getDescription(),
-              objectNames,
-              occupantNamesForBroadcast, // This is a general view, client 'look' might be more
-              // personalized
-              exits);
+              new RoomDescriptionDTO(
+                      startingRoom.getName(),
+                      startingRoom.getDescription(),
+                      objectNames,
+                      occupantNamesForBroadcast, // This is a general view, client 'look' might be more
+                      // personalized
+                      exits);
 
       broadcastToSession(initialRoomDTO, null);
     } else {
       logGameMessage("Error: Starting location could not be determined for broadcast.");
       broadcastToSession(
-          new TextMessage("Error: Starting location not found for the case.", true), null);
+              new TextMessage("Error: Starting location not found for the case.", true), null);
     }
 
     logGameMessage("Broadcasting 'type help' message...");
@@ -406,7 +450,7 @@ public class GameContextServer implements GameContext, GameActionContext {
   }
 
   @Override
-  public CaseFile getSelectedCase() {
+  public CaseData getSelectedCase() {
     return selectedCase;
   }
 
@@ -437,16 +481,16 @@ public class GameContextServer implements GameContext, GameActionContext {
 
     // Player 1
     if (player1Detective != null
-        && player1Detective.getCurrentRoom() != null
-        && player1Detective.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
+            && player1Detective.getCurrentRoom() != null
+            && player1Detective.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
       if (player1Id == null || !player1Id.equals(askingPlayerId)) {
         occupantNames.add(p1Session != null ? p1Session.getDisplayId() : "Player 1 (Host)");
       }
     }
     // Player 2
     if (player2Detective != null
-        && player2Detective.getCurrentRoom() != null
-        && player2Detective.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
+            && player2Detective.getCurrentRoom() != null
+            && player2Detective.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
       if (player2Id == null || !player2Id.equals(askingPlayerId)) {
         occupantNames.add(p2Session != null ? p2Session.getDisplayId() : "Player 2");
       }
@@ -454,19 +498,19 @@ public class GameContextServer implements GameContext, GameActionContext {
     // Suspects
     for (Suspect suspect : suspects) {
       if (suspect.getCurrentRoom() != null
-          && suspect.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
+              && suspect.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
         occupantNames.add(suspect.getName());
       }
     }
     // Watson
     if (watson != null
-        && watson.getCurrentRoom() != null
-        && watson.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
+            && watson.getCurrentRoom() != null
+            && watson.getCurrentRoom().getName().equalsIgnoreCase(room.getName())) {
       occupantNames.add("Dr. Watson");
     }
     return occupantNames.isEmpty()
-        ? "Occupants: None"
-        : "Occupants: " + String.join(", ", occupantNames);
+            ? "Occupants: None"
+            : "Occupants: " + String.join(", ", occupantNames);
   }
 
   @Override
@@ -490,16 +534,16 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (movingPlayer == null) {
       logGameMessage("Error: movePlayer called for null detective (playerId: " + playerId + ")");
       sendResponseToPlayer(
-          playerId,
-          new TextMessage("Error: Player context not found.", true)); // Send error to player
+              playerId,
+              new TextMessage("Error: Player context not found.", true)); // Send error to player
       return false;
     }
     Room oldRoom = movingPlayer.getCurrentRoom();
     if (oldRoom == null) {
       logGameMessage(
-          "Error: movePlayer called for detective not in a room (playerId: " + playerId + ")");
+              "Error: movePlayer called for detective not in a room (playerId: " + playerId + ")");
       sendResponseToPlayer(
-          playerId, new TextMessage("Error: Your current location is unknown. Cannot move.", true));
+              playerId, new TextMessage("Error: Your current location is unknown. Cannot move.", true));
       return false;
     }
 
@@ -509,13 +553,13 @@ public class GameContextServer implements GameContext, GameActionContext {
       // 1. Move the player
       movingPlayer.setCurrentRoom(newRoom);
       logGameMessage(
-          "Player "
-              + playerId
-              + " moved from "
-              + oldRoom.getName()
-              + " to "
-              + newRoom.getName()
-              + " (server state updated).");
+              "Player "
+                      + playerId
+                      + " moved from "
+                      + oldRoom.getName()
+                      + " to "
+                      + newRoom.getName()
+                      + " (server state updated).");
 
       // 2. NPCs take their turn to move (AFTER player has moved)
       // The triggeringPlayerId here is the one whose move initiated this round of NPC updates.
@@ -534,9 +578,9 @@ public class GameContextServer implements GameContext, GameActionContext {
     } else {
       // Player could not move in that direction
       sendResponseToPlayer(
-          playerId,
-          new TextMessage(
-              "You can't move " + direction + " from " + oldRoom.getName() + ".", false));
+              playerId,
+              new TextMessage(
+                      "You can't move " + direction + " from " + oldRoom.getName() + ".", false));
       return false;
     }
   }
@@ -545,14 +589,14 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (room == null || playerId == null) return;
     // It constructs the DTO based on the CURRENT state of 'room' and its occupants
     List<String> objectNames =
-        room.getObjects().values().stream().map(GameObject::getName).collect(Collectors.toList());
+            room.getObjects().values().stream().map(GameObject::getName).collect(Collectors.toList());
 
     // Get occupants description specific to the 'playerId' view for their new room
     String occupantsStr = getOccupantsDescriptionInRoom(room, playerId);
     List<String> occupantNamesList = new ArrayList<>();
     if (occupantsStr != null
-        && !occupantsStr.equalsIgnoreCase("Occupants: None")
-        && occupantsStr.startsWith("Occupants: ")) {
+            && !occupantsStr.equalsIgnoreCase("Occupants: None")
+            && occupantsStr.startsWith("Occupants: ")) {
       String[] names = occupantsStr.substring("Occupants: ".length()).split(",\\s*");
       for (String name : names) {
         if (!name.trim().isEmpty()) occupantNamesList.add(name.trim());
@@ -560,36 +604,36 @@ public class GameContextServer implements GameContext, GameActionContext {
     }
 
     Map<String, String> exits =
-        room.getNeighbors().entrySet().stream()
-            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getName()));
+            room.getNeighbors().entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getName()));
     sendResponseToPlayer(
-        playerId,
-        new RoomDescriptionDTO(
-            room.getName(), room.getDescription(), objectNames, occupantNamesList, exits));
+            playerId,
+            new RoomDescriptionDTO(
+                    room.getName(), room.getDescription(), objectNames, occupantNamesList, exits));
   }
 
   @Override
   public void addJournalEntry(JournalEntryDTO entry) {
     if (journal.addEntry(entry)) {
       logGameMessage(
-          "Journal entry added by " + entry.getContributorPlayerId() + ": " + entry.getText());
+              "Journal entry added by " + entry.getContributorPlayerId() + ": " + entry.getText());
       broadcastToSession(entry, null); // Broadcast the new DTO to all players
       // Send confirmation only to the contributor
       sendResponseToPlayer(
-          entry.getContributorPlayerId(),
-          new TextMessage("Your note was added to the journal.", false));
+              entry.getContributorPlayerId(),
+              new TextMessage("Your note was added to the journal.", false));
     } else {
       sendResponseToPlayer(
-          entry.getContributorPlayerId(),
-          new TextMessage("Note was a duplicate and not added.", false));
+              entry.getContributorPlayerId(),
+              new TextMessage("Note was a duplicate and not added.", false));
     }
   }
 
   @Override
   public List<JournalEntryDTO> getJournalEntries(String playerId) {
     return journal.getEntries().stream()
-        .sorted(Comparator.comparingLong(JournalEntryDTO::getTimestamp))
-        .collect(Collectors.toList());
+            .sorted(Comparator.comparingLong(JournalEntryDTO::getTimestamp))
+            .collect(Collectors.toList());
   }
 
   @Override
@@ -599,10 +643,10 @@ public class GameContextServer implements GameContext, GameActionContext {
       client.send(responseDto);
     } else {
       logGameMessage(
-          "Error: Attempted to send DTO to null or disconnected client: "
-              + playerId
-              + ". DTO: "
-              + responseDto.getClass().getSimpleName());
+              "Error: Attempted to send DTO to null or disconnected client: "
+                      + playerId
+                      + ". DTO: "
+                      + responseDto.getClass().getSimpleName());
     }
   }
 
@@ -618,18 +662,18 @@ public class GameContextServer implements GameContext, GameActionContext {
 
     // Ensure all objects are non-null before trying to access their properties
     if (otherPlayerSession != null
-        && movingPlayerSession != null
-        && oldRoom != null
-        && newRoom != null) {
+            && movingPlayerSession != null
+            && oldRoom != null
+            && newRoom != null) {
       otherPlayerSession.send(
-          new TextMessage(
-              movingPlayerSession.getDisplayId()
-                  + " moved from "
-                  + oldRoom.getName()
-                  + " to "
-                  + newRoom.getName()
-                  + ".",
-              false));
+              new TextMessage(
+                      movingPlayerSession.getDisplayId()
+                              + " moved from "
+                              + oldRoom.getName()
+                              + " to "
+                              + newRoom.getName()
+                              + ".",
+                      false));
     }
   }
 
@@ -645,13 +689,13 @@ public class GameContextServer implements GameContext, GameActionContext {
     }
     if (!conditionsMet) {
       logGameMessage(
-          "Exam conditions not met for player "
-              + playerId
-              + " (isCaseStarted: "
-              + isCaseStarted()
-              + ", examActive: "
-              + examActiveForSession
-              + ")");
+              "Exam conditions not met for player "
+                      + playerId
+                      + " (isCaseStarted: "
+                      + isCaseStarted()
+                      + ", examActive: "
+                      + examActiveForSession
+                      + ")");
     }
     return isHost && conditionsMet;
   }
@@ -660,15 +704,15 @@ public class GameContextServer implements GameContext, GameActionContext {
   public void startExamProcess(String playerId) { // playerId is the initiator
     if (!canStartFinalExam(playerId)) { // This now checks if initiator is host
       sendResponseToPlayer(
-          playerId,
-          new TextMessage(
-              "You cannot start the final exam at this time (not host or conditions not met).",
-              true));
+              playerId,
+              new TextMessage(
+                      "You cannot start the final exam at this time (not host or conditions not met).",
+                      true));
       return;
     }
     if (selectedCase.getFinalExam() == null || selectedCase.getFinalExam().isEmpty()) {
       broadcastToSession(
-          new TextMessage("Error: No final exam questions configured for this case.", true), null);
+              new TextMessage("Error: No final exam questions configured for this case.", true), null);
       return;
     }
 
@@ -681,11 +725,11 @@ public class GameContextServer implements GameContext, GameActionContext {
     String hostDisplay = hostSession != null ? hostSession.getDisplayId() : "The Host";
 
     logGameMessage(
-        "Interactive final exam initiated by host: "
-            + hostDisplay
-            + ". Sending first question to all.");
+            "Interactive final exam initiated by host: "
+                    + hostDisplay
+                    + ". Sending first question to all.");
     broadcastToSession(
-        new TextMessage("--- Final Exam Initiated by " + hostDisplay + " ---", false), null);
+            new TextMessage("--- Final Exam Initiated by " + hostDisplay + " ---", false), null);
     sendNextExamQuestionToSession(); // Changed from sendNextExamQuestionToHost
   }
 
@@ -697,22 +741,22 @@ public class GameContextServer implements GameContext, GameActionContext {
   @Override
   public void processRequestStartCase(String requestingPlayerId) {
     logGameMessage(
-        "PROCESS_REQUEST_START_CASE: by PlayerId="
-            + requestingPlayerId
-            + ", CaseStarted="
-            + isCaseStarted()
-            + ", IsHost="
-            + isPlayerHost(requestingPlayerId));
+            "PROCESS_REQUEST_START_CASE: by PlayerId="
+                    + requestingPlayerId
+                    + ", CaseStarted="
+                    + isCaseStarted()
+                    + ", IsHost="
+                    + isPlayerHost(requestingPlayerId));
 
     if (isCaseStarted()) {
       sendResponseToPlayer(
-          requestingPlayerId, new TextMessage("The case has already started.", false));
+              requestingPlayerId, new TextMessage("The case has already started.", false));
       return;
     }
     if (isPlayerHost(requestingPlayerId)) { // If host typed "request start case"
       sendResponseToPlayer(
-          requestingPlayerId,
-          new TextMessage("As host, you can directly use the 'start case' command.", false));
+              requestingPlayerId,
+              new TextMessage("As host, you can directly use the 'start case' command.", false));
       return;
     }
 
@@ -720,33 +764,33 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (player1Id != null) { // Check if host (player1Id) is actually connected/present
       ClientSession requestingPlayerSession = gameSession.getClientSessionById(requestingPlayerId);
       String requesterDisplay =
-          (requestingPlayerSession != null)
-              ? requestingPlayerSession.getDisplayId()
-              : "Your partner (" + requestingPlayerId.substring(0, 4) + "..)";
+              (requestingPlayerSession != null)
+                      ? requestingPlayerSession.getDisplayId()
+                      : "Your partner (" + requestingPlayerId.substring(0, 4) + "..)";
 
       // Send prompt to HOST (player1Id)
       logGameMessage(
-          "PROCESS_REQUEST_START_CASE: Sending prompt to host "
-              + player1Id
-              + " about request from "
-              + requestingPlayerId);
+              "PROCESS_REQUEST_START_CASE: Sending prompt to host "
+                      + player1Id
+                      + " about request from "
+                      + requestingPlayerId);
       sendResponseToPlayer(
-          player1Id,
-          new TextMessage(
-              requesterDisplay + " has requested to start the case. Type 'start case' to begin.",
-              false));
+              player1Id,
+              new TextMessage(
+                      requesterDisplay + " has requested to start the case. Type 'start case' to begin.",
+                      false));
 
       // Send confirmation to GUEST (requestingPlayerId)
       sendResponseToPlayer(
-          requestingPlayerId,
-          new TextMessage("Request sent to the host to start the case.", false));
+              requestingPlayerId,
+              new TextMessage("Request sent to the host to start the case.", false));
     } else {
       logGameMessage(
-          "PROCESS_REQUEST_START_CASE: Host (player1Id) is null or not available. Cannot process request from "
-              + requestingPlayerId);
+              "PROCESS_REQUEST_START_CASE: Host (player1Id) is null or not available. Cannot process request from "
+                      + requestingPlayerId);
       sendResponseToPlayer(
-          requestingPlayerId,
-          new TextMessage("The host is not currently available to start the case.", true));
+              requestingPlayerId,
+              new TextMessage("The host is not currently available to start the case.", true));
     }
   }
 
@@ -754,56 +798,56 @@ public class GameContextServer implements GameContext, GameActionContext {
   public void processRequestInitiateExam(String requestingPlayerId) {
     if (!isCaseStarted()) {
       sendResponseToPlayer(
-          requestingPlayerId,
-          new TextMessage("The case has not started yet. Cannot request exam.", true));
+              requestingPlayerId,
+              new TextMessage("The case has not started yet. Cannot request exam.", true));
       return;
     }
     if (examActiveForSession) {
       sendResponseToPlayer(
-          requestingPlayerId, new TextMessage("An exam is already in progress.", false));
+              requestingPlayerId, new TextMessage("An exam is already in progress.", false));
       return;
     }
     if (isPlayerHost(requestingPlayerId)) {
       sendResponseToPlayer(
-          requestingPlayerId,
-          new TextMessage("As host, you can directly use 'final exam' to initiate.", false));
+              requestingPlayerId,
+              new TextMessage("As host, you can directly use 'final exam' to initiate.", false));
       return;
     }
     // Guest is requesting
     if (player1Id != null) { // If host is present
       ClientSession requestingPlayerSession = gameSession.getClientSessionById(requestingPlayerId);
       String requesterDisplay =
-          requestingPlayerSession != null ? requestingPlayerSession.getDisplayId() : "Your partner";
+              requestingPlayerSession != null ? requestingPlayerSession.getDisplayId() : "Your partner";
 
       sendResponseToPlayer(
-          player1Id,
-          new TextMessage(
-              requesterDisplay
-                  + " has requested to start the final exam. Type 'final exam' to initiate.",
-              false));
+              player1Id,
+              new TextMessage(
+                      requesterDisplay
+                              + " has requested to start the final exam. Type 'final exam' to initiate.",
+                      false));
       sendResponseToPlayer(
-          requestingPlayerId,
-          new TextMessage("Request sent to host to initiate the final exam.", false));
+              requestingPlayerId,
+              new TextMessage("Request sent to host to initiate the final exam.", false));
       logGameMessage(
-          "Player "
-              + requestingPlayerId
-              + " requested final exam. Host "
-              + player1Id
-              + " notified.");
+              "Player "
+                      + requestingPlayerId
+                      + " requested final exam. Host "
+                      + player1Id
+                      + " notified.");
     } else {
       sendResponseToPlayer(
-          requestingPlayerId, new TextMessage("Host is not available to start the exam.", true));
+              requestingPlayerId, new TextMessage("Host is not available to start the exam.", true));
     }
   }
 
   private void sendNextExamQuestionToSession() {
     logGameMessage(
-        "SEND_NEXT_Q_TO_SESS: examActive="
-            + examActiveForSession
-            + ", CurrentIndex="
-            + currentExamQuestionIndex
-            + ", QuestionsListSize="
-            + (currentExamQuestionsList != null ? currentExamQuestionsList.size() : "NULL_LIST"));
+            "SEND_NEXT_Q_TO_SESS: examActive="
+                    + examActiveForSession
+                    + ", CurrentIndex="
+                    + currentExamQuestionIndex
+                    + ", QuestionsListSize="
+                    + (currentExamQuestionsList != null ? currentExamQuestionsList.size() : "NULL_LIST"));
 
     if (!examActiveForSession) {
       logGameMessage("SEND_NEXT_Q_TO_SESS: Exam not active, exiting send logic.");
@@ -812,12 +856,12 @@ public class GameContextServer implements GameContext, GameActionContext {
 
     if (currentExamQuestionsList == null || currentExamQuestionsList.isEmpty()) {
       logGameMessage(
-          "SEND_NEXT_Q_TO_SESS: CRITICAL - currentExamQuestionsList is null or empty! Cannot proceed with exam.");
+              "SEND_NEXT_Q_TO_SESS: CRITICAL - currentExamQuestionsList is null or empty! Cannot proceed with exam.");
       // Attempt to end exam gracefully if possible, or send error to host
       if (player1Id != null) {
         sendResponseToPlayer(
-            player1Id,
-            new TextMessage("Error: Exam questions are missing. Cannot continue exam.", true));
+                player1Id,
+                new TextMessage("Error: Exam questions are missing. Cannot continue exam.", true));
       }
       evaluateAndBroadcastExamResults(player1Id); // This will likely show 0/0 or error
       return;
@@ -827,82 +871,82 @@ public class GameContextServer implements GameContext, GameActionContext {
       // Send next question
       CaseFile.ExamQuestion q = currentExamQuestionsList.get(currentExamQuestionIndex);
       ExamQuestionDTO questionDTO =
-          new ExamQuestionDTO(currentExamQuestionIndex + 1, q.getQuestion());
+              new ExamQuestionDTO(currentExamQuestionIndex + 1, q.getQuestion());
 
       logGameMessage(
-          "SEND_NEXT_Q_TO_SESS: Broadcasting Q_DTO for Q"
-              + (currentExamQuestionIndex + 1)
-              + ": \""
-              + q.getQuestion().substring(0, Math.min(20, q.getQuestion().length()))
-              + "...\"");
+              "SEND_NEXT_Q_TO_SESS: Broadcasting Q_DTO for Q"
+                      + (currentExamQuestionIndex + 1)
+                      + ": \""
+                      + q.getQuestion().substring(0, Math.min(20, q.getQuestion().length()))
+                      + "...\"");
       broadcastToSession(questionDTO, null);
 
       // Send specific prompt to host
       if (player1Id != null) {
         logGameMessage(
-            "SEND_NEXT_Q_TO_SESS: Sending prompt to host "
-                + player1Id
-                + " for Q"
-                + (currentExamQuestionIndex + 1));
+                "SEND_NEXT_Q_TO_SESS: Sending prompt to host "
+                        + player1Id
+                        + " for Q"
+                        + (currentExamQuestionIndex + 1));
         sendResponseToPlayer(
-            player1Id,
-            new TextMessage(
-                "Host, please submit your answer for Q" + (currentExamQuestionIndex + 1) + ".",
-                false));
+                player1Id,
+                new TextMessage(
+                        "Host, please submit your answer for Q" + (currentExamQuestionIndex + 1) + ".",
+                        false));
       }
       // Notify guest
       if (player2Id != null
-          && (!player2Id.equals(player1Id))) { // Ensure guest is not also host (single player test)
+              && (!player2Id.equals(player1Id))) { // Ensure guest is not also host (single player test)
         ClientSession hostSess = gameSession.getClientSessionById(player1Id);
         String hostDisp =
-            (hostSess != null)
-                ? hostSess.getDisplayId()
-                : (player1Detective != null ? player1Detective.getPlayerId() : "The Host");
+                (hostSess != null)
+                        ? hostSess.getDisplayId()
+                        : (player1Detective != null ? player1Detective.getPlayerId() : "The Host");
         logGameMessage(
-            "SEND_NEXT_Q_TO_SESS: Notifying guest "
-                + player2Id
-                + " that host is answering Q"
-                + (currentExamQuestionIndex + 1));
+                "SEND_NEXT_Q_TO_SESS: Notifying guest "
+                        + player2Id
+                        + " that host is answering Q"
+                        + (currentExamQuestionIndex + 1));
         sendResponseToPlayer(
-            player2Id,
-            new TextMessage(
-                hostDisp
-                    + " is answering exam question "
-                    + (currentExamQuestionIndex + 1)
-                    + "/"
-                    + currentExamQuestionsList.size()
-                    + "...",
-                false));
+                player2Id,
+                new TextMessage(
+                        hostDisp
+                                + " is answering exam question "
+                                + (currentExamQuestionIndex + 1)
+                                + "/"
+                                + currentExamQuestionsList.size()
+                                + "...",
+                        false));
       }
     } else {
       // All questions have been presented and answers collected
       logGameMessage(
-          "SEND_NEXT_Q_TO_SESS: All questions ("
-              + currentExamQuestionsList.size()
-              + ") presented. CurrentIndex="
-              + currentExamQuestionIndex
-              + ". Calling evaluateAndBroadcastExamResults for host: "
-              + player1Id);
+              "SEND_NEXT_Q_TO_SESS: All questions ("
+                      + currentExamQuestionsList.size()
+                      + ") presented. CurrentIndex="
+                      + currentExamQuestionIndex
+                      + ". Calling evaluateAndBroadcastExamResults for host: "
+                      + player1Id);
       evaluateAndBroadcastExamResults(player1Id);
     }
   }
 
   public void processExamAnswer(String submittingPlayerId, int questionNumber, String answerText) {
     logGameMessage(
-        "PROCESS_EXAM_ANSWER: Initiated by PlayerId="
-            + submittingPlayerId
-            + ", For QNum="
-            + questionNumber
-            + ", Answer=\""
-            + answerText
-            + "\", CurrentIndexBefore="
-            + currentExamQuestionIndex
-            + ", ExamActive="
-            + examActiveForSession);
+            "PROCESS_EXAM_ANSWER: Initiated by PlayerId="
+                    + submittingPlayerId
+                    + ", For QNum="
+                    + questionNumber
+                    + ", Answer=\""
+                    + answerText
+                    + "\", CurrentIndexBefore="
+                    + currentExamQuestionIndex
+                    + ", ExamActive="
+                    + examActiveForSession);
 
     if (!examActiveForSession) {
       logGameMessage(
-          "PROCESS_EXAM_ANSWER: Exam not active. Sending error to " + submittingPlayerId);
+              "PROCESS_EXAM_ANSWER: Exam not active. Sending error to " + submittingPlayerId);
       sendResponseToPlayer(submittingPlayerId, new TextMessage("Exam not active.", true));
       return;
     }
@@ -910,172 +954,153 @@ public class GameContextServer implements GameContext, GameActionContext {
     // *** Only host (player1Id) can submit answers ***
     if (!(player1Id != null && player1Id.equals(submittingPlayerId))) {
       logGameMessage(
-          "PROCESS_EXAM_ANSWER: Attempt to submit answer by non-host "
-              + submittingPlayerId
-              + ". Denied.");
+              "PROCESS_EXAM_ANSWER: Attempt to submit answer by non-host "
+                      + submittingPlayerId
+                      + ". Denied.");
       sendResponseToPlayer(
-          submittingPlayerId, new TextMessage("Only the host can submit exam answers.", true));
+              submittingPlayerId, new TextMessage("Only the host can submit exam answers.", true));
       return;
     }
 
     // Validate questionNumber against current progress (currentExamQuestionIndex is 0-based)
     if (questionNumber != (currentExamQuestionIndex + 1)) {
       logGameMessage(
-          "PROCESS_EXAM_ANSWER: Host "
-              + submittingPlayerId
-              + " submitted answer for Q"
-              + questionNumber
-              + ", but server expected Q"
-              + (currentExamQuestionIndex + 1)
-              + ". Resending current question.");
+              "PROCESS_EXAM_ANSWER: Host "
+                      + submittingPlayerId
+                      + " submitted answer for Q"
+                      + questionNumber
+                      + ", but server expected Q"
+                      + (currentExamQuestionIndex + 1)
+                      + ". Resending current question.");
       sendResponseToPlayer(
-          submittingPlayerId,
-          new TextMessage(
-              "Error: Answer submitted for an unexpected question. Please answer the current one.",
-              true));
+              submittingPlayerId,
+              new TextMessage(
+                      "Error: Answer submitted for an unexpected question. Please answer the current one.",
+                      true));
 
       // Resend the current expected question to the host to get them back on track
       if (currentExamQuestionsList != null
-          && currentExamQuestionIndex < currentExamQuestionsList.size()) {
+              && currentExamQuestionIndex < currentExamQuestionsList.size()) {
         CaseFile.ExamQuestion q = currentExamQuestionsList.get(currentExamQuestionIndex);
         logGameMessage(
-            "PROCESS_EXAM_ANSWER: Resending Q"
-                + (currentExamQuestionIndex + 1)
-                + " to host "
-                + player1Id);
+                "PROCESS_EXAM_ANSWER: Resending Q"
+                        + (currentExamQuestionIndex + 1)
+                        + " to host "
+                        + player1Id);
         sendResponseToPlayer(
-            player1Id, new ExamQuestionDTO(currentExamQuestionIndex + 1, q.getQuestion()));
+                player1Id, new ExamQuestionDTO(currentExamQuestionIndex + 1, q.getQuestion()));
         sendResponseToPlayer(
-            player1Id,
-            new TextMessage(
-                "Host, please re-submit your answer for Q" + (currentExamQuestionIndex + 1) + ".",
-                false));
+                player1Id,
+                new TextMessage(
+                        "Host, please re-submit your answer for Q" + (currentExamQuestionIndex + 1) + ".",
+                        false));
       } else {
         logGameMessage(
-            "PROCESS_EXAM_ANSWER: Cannot resend question, list empty or index out of bounds. CurrentIndex="
-                + currentExamQuestionIndex);
+                "PROCESS_EXAM_ANSWER: Cannot resend question, list empty or index out of bounds. CurrentIndex="
+                        + currentExamQuestionIndex);
       }
       return;
     }
 
     if (player1ExamAnswersMap == null) { // Should have been initialized in startExamForPlayer
       logGameMessage(
-          "PROCESS_EXAM_ANSWER: CRITICAL - player1ExamAnswersMap is null! Re-initializing.");
+              "PROCESS_EXAM_ANSWER: CRITICAL - player1ExamAnswersMap is null! Re-initializing.");
       player1ExamAnswersMap = new HashMap<>();
     }
     player1ExamAnswersMap.put(questionNumber, answerText); // Store 1-based question number as key
 
     currentExamQuestionIndex++; // Advance to the next question index for the server
     logGameMessage(
-        "PROCESS_EXAM_ANSWER: Stored answer for Q"
-            + questionNumber
-            + " by host "
-            + submittingPlayerId
-            + ". MapSize="
-            + player1ExamAnswersMap.size()
-            + ", CurrentIndexAfterIncrement="
-            + currentExamQuestionIndex
-            + ". Calling sendNextExamQuestionToSession().");
+            "PROCESS_EXAM_ANSWER: Stored answer for Q"
+                    + questionNumber
+                    + " by host "
+                    + submittingPlayerId
+                    + ". MapSize="
+                    + player1ExamAnswersMap.size()
+                    + ", CurrentIndexAfterIncrement="
+                    + currentExamQuestionIndex
+                    + ". Calling sendNextExamQuestionToSession().");
 
     sendNextExamQuestionToSession(); // Broadcast next question to all or evaluate
   }
 
+
   private void evaluateAndBroadcastExamResults(String hostPlayerId) {
-    logGameMessage(
-        "EVAL_EXAM_RESULTS: Starting evaluation for host "
-            + hostPlayerId
-            + " in session "
-            + gameSession.getSessionId());
+    logger.info("[SESS_CTX:{}] EVAL_EXAM_RESULTS: Starting evaluation for host {}", gameSession.getSessionId(), hostPlayerId);
 
     if (currentExamQuestionsList == null) {
-      logGameMessage(
-          "EVAL_EXAM_RESULTS: Error - currentExamQuestionsList is null. Cannot evaluate.");
+      logger.error("[SESS_CTX:{}] EVAL_EXAM_RESULTS: Error - currentExamQuestionsList is null. Cannot evaluate.", gameSession.getSessionId());
       if (player1Id != null && player1Id.equals(hostPlayerId)) {
-        sendResponseToPlayer(
-            player1Id, new TextMessage("Error during exam evaluation (missing questions).", true));
+        sendResponseToPlayer(player1Id, new TextMessage("Error during exam evaluation (missing questions).", true));
       }
       resetServerExamState();
       return;
     }
+
     if (player1ExamAnswersMap == null) {
-      logGameMessage(
-          "EVAL_EXAM_RESULTS: Warning - player1ExamAnswersMap is null. Assuming 0 score.");
+      logger.warn("[SESS_CTX:{}] EVAL_EXAM_RESULTS: Warning - player1ExamAnswersMap is null. Assuming 0 score.", gameSession.getSessionId());
       player1ExamAnswersMap = new HashMap<>();
     }
 
     int score = 0;
-    List<String> reviewableAnswersDetails =
-        new ArrayList<>(); // This list will be sent to the client
+    List<String> reviewableAnswersDetails = new ArrayList<>();
+    int totalQuestions = currentExamQuestionsList.size();
 
-    for (int i = 0; i < currentExamQuestionsList.size(); i++) {
+    for (int i = 0; i < totalQuestions; i++) {
       CaseFile.ExamQuestion actualQuestion = currentExamQuestionsList.get(i);
-      String actualQuestionText = actualQuestion.getQuestion();
-      String correctAnswer = actualQuestion.getAnswer(); // Server knows the correct answer
-      String hostAnswer = player1ExamAnswersMap.get(i + 1); // Answers stored with 1-based key
+      String correctAnswer = actualQuestion.getAnswer();
+      String hostAnswer = player1ExamAnswersMap.get(i + 1);
 
       if (hostAnswer != null && hostAnswer.equalsIgnoreCase(correctAnswer)) {
         score++;
       } else {
-        // Question was answered incorrectly by the host, or not answered
-        // --- MODIFICATION HERE: Do NOT include the correct answer in the DTO detail string ---
-        String reviewDetail =
-            String.format(
-                "Q: %s\n  Your Answer: '%s'", // Removed "Correct Answer: '%s'"
-                actualQuestionText, (hostAnswer != null ? hostAnswer : "Not answered"));
-        // --- END MODIFICATION ---
+        String reviewDetail = String.format("Q%d: %s\n   Your Answer: '%s'", (i + 1), actualQuestion.getQuestion(), (hostAnswer != null ? hostAnswer : "Not answered"));
         reviewableAnswersDetails.add(reviewDetail);
       }
     }
-    logGameMessage(
-        "EVAL_EXAM_RESULTS: Host "
-            + hostPlayerId
-            + " score: "
-            + score
-            + "/"
-            + currentExamQuestionsList.size());
 
-    // ... (Update ranks, determine feedback message - this part remains the same) ...
-    String finalRankString =
-        Core.enums.Rank.JUNIOR_INVESTIGATOR.getDisplayName(); // More robust default
+    logger.info("[SESS_CTX:{}] EVAL_EXAM_RESULTS: Host {} score: {}/{}. Total team deductions: {}", gameSession.getSessionId(), hostPlayerId, score, totalQuestions, this.sessionDeduceCount);
+    // --- NEW DYNAMIC RANK EVALUATION ---
+    Rank finalRank = RankEvaluator.evaluate(this.sessionDeduceCount, this.selectedCase);
+    String finalRankString = (finalRank != null) ? finalRank.getRankName() : "Unranked";
+
     Detective hostDetective = getPlayerDetective(hostPlayerId);
     if (hostDetective != null) {
       hostDetective.setFinalExamScore(score);
-      hostDetective.evaluateRank();
-      finalRankString = hostDetective.getRank(); // This returns the String display name
+      hostDetective.setRank(finalRank);
     }
+
     Detective guestDetective = getPlayerDetective(player2Id);
     if (guestDetective != null) {
       guestDetective.setFinalExamScore(score);
-      guestDetective.evaluateRank();
+      guestDetective.setRank(finalRank);
+    }
+    // --- END DYNAMIC RANK EVALUATION ---
+
+    // Determine feedback message based on score
+    String feedback;
+    ClientSession hostSession = gameSession.getClientSessionById(hostPlayerId);
+    String hostDisplay = (hostSession != null) ? hostSession.getDisplayId() : "The Host";
+
+    if (score == totalQuestions) {
+      feedback = "Outstanding! The case is solved perfectly by " + hostDisplay + "!";
+    } else if (score >= totalQuestions * 0.5) {
+      feedback = "Good effort by " + hostDisplay + "! Key aspects uncovered.";
+    } else {
+      feedback = "The mystery remains largely unsolved by " + hostDisplay + ". Further investigation was needed.";
     }
 
-    String feedback;
-    int totalQuestions = currentExamQuestionsList.size();
-    ClientSession hostSession = gameSession.getClientSessionById(hostPlayerId);
-    String hostDisplay =
-        (hostSession != null)
-            ? hostSession.getDisplayId()
-            : (hostDetective != null ? hostDetective.getPlayerId() : "The Host");
+    // Create the final result DTO
+    ExamResultDTO resultDTO = new ExamResultDTO(
+            score,
+            totalQuestions,
+            feedback,
+            finalRankString,
+            reviewableAnswersDetails
+    );
 
-    if (score == totalQuestions)
-      feedback = "Outstanding! The case is solved perfectly by " + hostDisplay + "!";
-    else if (score >= totalQuestions * 0.5)
-      feedback = "Good effort by " + hostDisplay + "! Key aspects uncovered.";
-    else
-      feedback =
-          "The mystery remains largely unsolved by "
-              + hostDisplay
-              + ". Further investigation was needed.";
+    logger.info("[SESS_CTX:{}] EVAL_EXAM_RESULTS: Broadcasting ExamResultDTO: Score={}, Rank={}", gameSession.getSessionId(), score, finalRankString);
 
-    ExamResultDTO resultDTO =
-        new ExamResultDTO(
-            score, totalQuestions, feedback, finalRankString, reviewableAnswersDetails);
-
-    logGameMessage(
-        "EVAL_EXAM_RESULTS: Broadcasting ExamResultDTO: Score="
-            + score
-            + ", Rank="
-            + finalRankString);
     broadcastToSession(resultDTO, null);
     broadcastToSession(new TextMessage("--- Final Exam Concluded ---", false), null);
 
@@ -1091,7 +1116,7 @@ public class GameContextServer implements GameContext, GameActionContext {
     this.player1ExamAnswersMap = null;
     this.currentExamQuestionIndex = 0;
     logGameMessage(
-        "Server-side exam state has been reset for session " + gameSession.getSessionId());
+            "Server-side exam state has been reset for session " + gameSession.getSessionId());
   }
 
   @Override
@@ -1100,23 +1125,23 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (client != null) {
       String oldDisplayName = client.getDisplayId();
       if (newDisplayName != null
-          && !newDisplayName.equals(oldDisplayName)
-          && !newDisplayName.trim().isEmpty()
-          && newDisplayName.length() < 25) {
+              && !newDisplayName.equals(oldDisplayName)
+              && !newDisplayName.trim().isEmpty()
+              && newDisplayName.length() < 25) {
         client.setDisplayId(newDisplayName); // Update on the ClientSession object
         logGameMessage(
-            "Player "
-                + playerId
-                + " (formerly "
-                + oldDisplayName
-                + ") changed display name to "
-                + newDisplayName);
+                "Player "
+                        + playerId
+                        + " (formerly "
+                        + oldDisplayName
+                        + ") changed display name to "
+                        + newDisplayName);
 
         // Broadcast the change to all players in the session
         PlayerNameChangedDTO pncDTO =
-            new PlayerNameChangedDTO(playerId, oldDisplayName, newDisplayName);
+                new PlayerNameChangedDTO(playerId, oldDisplayName, newDisplayName);
         broadcastToSession(
-            pncDTO, null); // Send to all, including the changer for confirmation sync
+                pncDTO, null); // Send to all, including the changer for confirmation sync
 
         // If this player is hosting a public game that's still in the lobby list,
         // the GameSessionManager needs to be notified to update the public game info.
@@ -1127,11 +1152,11 @@ public class GameContextServer implements GameContext, GameActionContext {
         if (newDisplayName.equals(oldDisplayName)) {
           // Name is the same, just confirm back to sender if needed (optional)
           sendResponseToPlayer(
-              playerId,
-              new TextMessage("Your display name is already " + newDisplayName + ".", false));
+                  playerId,
+                  new TextMessage("Your display name is already " + newDisplayName + ".", false));
         } else {
           sendResponseToPlayer(
-              playerId, new TextMessage("New display name is invalid or too long.", true));
+                  playerId, new TextMessage("New display name is invalid or too long.", true));
         }
       }
     } else {
@@ -1140,7 +1165,7 @@ public class GameContextServer implements GameContext, GameActionContext {
   }
 
   @Override
-  public WatsonHintResponseDTO askWatsonForHint(String playerId) { // <<< MODIFIED RETURN TYPE
+  public WatsonHintResponseDTO askWatsonForHint(String playerId) {
     Detective player = getPlayerDetective(playerId);
     if (player == null) {
       logGameMessage("askWatsonForHint: Player " + playerId + " not found in context.");
@@ -1149,44 +1174,33 @@ public class GameContextServer implements GameContext, GameActionContext {
     if (this.watson == null) {
       return new WatsonHintResponseDTO("Dr. Watson is not available in this case.", false);
     }
-
     Room playerRoom = player.getCurrentRoom();
     Room watsonRoom = this.watson.getCurrentRoom();
-
     if (playerRoom == null) {
-      return new WatsonHintResponseDTO(
-          "Your location is unknown. Cannot determine if Watson is present.", false);
+      return new WatsonHintResponseDTO("Your location is unknown. Cannot determine if Watson is present.", false);
     }
     if (watsonRoom == null) {
       return new WatsonHintResponseDTO("Dr. Watson's location is currently unknown.", false);
     }
-
     if (watsonRoom.getName().equalsIgnoreCase(playerRoom.getName())) {
-      String hintText = this.watson.provideHint(); // Gets the raw hint string
-
+      String hintText = this.watson.provideHint();
       boolean isActualGameHint = true;
-      if (hintText == null
-          || hintText.trim().isEmpty()
-          || hintText.startsWith("I seem to be out of specific thoughts")
-          || hintText.startsWith("My mind is blank")
-          || hintText.startsWith("I'm afraid I have no specific insights")) {
+      if (hintText == null || hintText.trim().isEmpty() ||
+              hintText.startsWith("I seem to be out of specific thoughts") ||
+              hintText.startsWith("My mind is blank") ||
+              hintText.startsWith("I'm afraid I have no specific insights")) {
         isActualGameHint = false;
       }
       if (hintText == null || hintText.trim().isEmpty()) {
         hintText = "Dr. Watson ponders but offers no specific insight at the moment.";
       }
-
-      // Journal entry for Watson's hint could be added here if desired for MP,
-      // and then broadcast. Or let AskWatsonCommand handle it (though command doesn't know display
-      // names easily).
-      // For consistency, if AskWatsonCommand adds to journal, it needs
-      // context.getPlayerDisplayName("Dr. Watson").
-      // For now, let's assume Watson's hints ARE NOT auto-journaled by this context method.
       return new WatsonHintResponseDTO(hintText, isActualGameHint);
     } else {
       return new WatsonHintResponseDTO("Dr. Watson is not in this room.", false);
     }
   }
+
+
 
   @Override
   public void updateNpcMovements(String triggeringPlayerId) {
@@ -1195,120 +1209,95 @@ public class GameContextServer implements GameContext, GameActionContext {
       return;
     }
 
-    // For logging, get current player locations (not strictly needed for movement decision anymore)
-    String p1RoomName =
-        (player1Detective != null && player1Detective.getCurrentRoom() != null)
-            ? player1Detective.getCurrentRoom().getName()
-            : "N/A";
-    String p2RoomName =
-        (player2Detective != null && player2Detective.getCurrentRoom() != null)
-            ? player2Detective.getCurrentRoom().getName()
-            : "N/A";
-    logGameMessage(
-        "NPC Movement START (MP). Player1 in: " + p1RoomName + ", Player2 in: " + p2RoomName);
+    // --- NEW: Determine all currently occupied rooms ---
+    Set<String> occupiedRoomNames = new HashSet<>();
+    if (player1Detective != null && player1Detective.getCurrentRoom() != null) {
+      occupiedRoomNames.add(player1Detective.getCurrentRoom().getName().toLowerCase());
+    }
+    if (player2Detective != null && player2Detective.getCurrentRoom() != null) {
+      occupiedRoomNames.add(player2Detective.getCurrentRoom().getName().toLowerCase());
+    }
 
-    // --- Move Suspects (Completely Random to any Neighbor) ---
+    logGameMessage("NPC Movement START. Occupied rooms: " + occupiedRoomNames);
+
+    // --- Move Suspects ---
     for (Suspect suspect : this.suspects) {
       Room oldSuspectRoom = suspect.getCurrentRoom();
+
       if (oldSuspectRoom == null) {
         logGameMessage("Suspect " + suspect.getName() + " is not in any room, cannot move.");
         continue;
       }
 
-      Map<String, Room> neighbors = oldSuspectRoom.getNeighbors();
-      if (neighbors.isEmpty()) {
-        logGameMessage(
-            "Suspect "
-                + suspect.getName()
-                + " in "
-                + oldSuspectRoom.getName()
-                + " has no neighbors, stays put.");
+      // NEW RULE: If a player is in the same room as the suspect, the suspect does not move.
+      if (occupiedRoomNames.contains(oldSuspectRoom.getName().toLowerCase())) {
+        logGameMessage("Suspect " + suspect.getName() + " stays in " + oldSuspectRoom.getName() + " (room is occupied by a player).");
         continue;
       }
 
-      // Suspect considers ALL neighbors as valid moves, regardless of player location.
-      List<Room> allPossibleMoves = new ArrayList<>(neighbors.values());
+      Map<String, Room> neighbors = oldSuspectRoom.getNeighbors();
+      if (neighbors.isEmpty()) {
+        logGameMessage("Suspect " + suspect.getName() + " in " + oldSuspectRoom.getName() + " has no neighbors, stays put.");
+        continue;
+      }
 
-      // This check is redundant if neighbors was not empty, but safe.
-      if (!allPossibleMoves.isEmpty()) {
-        Room newSuspectRoom = allPossibleMoves.get(random.nextInt(allPossibleMoves.size()));
-        if (!newSuspectRoom
-            .getName()
-            .equalsIgnoreCase(oldSuspectRoom.getName())) { // Check if actually moved
-          suspect.setCurrentRoom(newSuspectRoom);
-          logGameMessage(
-              "Suspect "
-                  + suspect.getName()
-                  + " moved RANDOMLY from "
-                  + oldSuspectRoom.getName()
-                  + " to "
-                  + newSuspectRoom.getName()
-                  + " (MP).");
-          broadcastToSession(
-              new NpcMovedDTO(
-                  suspect.getName(), oldSuspectRoom.getName(), newSuspectRoom.getName()),
-              null);
-        }
+      // NEW RULE: Filter out neighbors that are occupied by players.
+      List<Room> possibleMoves = neighbors.values().stream()
+              .filter(room -> !occupiedRoomNames.contains(room.getName().toLowerCase()))
+              .collect(Collectors.toList());
+
+      if (!possibleMoves.isEmpty()) {
+        Room newSuspectRoom = possibleMoves.get(random.nextInt(possibleMoves.size()));
+        suspect.setCurrentRoom(newSuspectRoom);
+        logGameMessage("Suspect " + suspect.getName() + " moved from " + oldSuspectRoom.getName() + " to " + newSuspectRoom.getName());
       } else {
-        logGameMessage(
-            "Suspect "
-                + suspect.getName()
-                + " in "
-                + oldSuspectRoom.getName()
-                + " stays put (MP - unexpected: had neighbors but list empty).");
+        logGameMessage("Suspect " + suspect.getName() + " has no unoccupied neighbors, stays put in " + oldSuspectRoom.getName());
       }
     }
 
-    // --- Move Watson (logic remains the same: random, can enter player rooms) ---
+    // --- Move Watson (applying the same logic) ---
     if (this.watson != null) {
       Room oldWatsonRoom = this.watson.getCurrentRoom();
-      if (oldWatsonRoom == null) { // Should be initialized
-        if (!rooms.isEmpty()) {
-          this.watson.setCurrentRoom(
-              new ArrayList<>(rooms.values()).get(random.nextInt(rooms.size())));
-          logGameMessage(
-              "Watson was roomless (MP), placed randomly in "
-                  + this.watson.getCurrentRoom().getName());
-          oldWatsonRoom = this.watson.getCurrentRoom();
-        } else {
-          logGameMessage("Watson cannot move (MP), no rooms available.");
-          return; // Exit if no rooms for Watson
-        }
-      }
 
-      Map<String, Room> watsonNeighbors = oldWatsonRoom.getNeighbors();
-      if (!watsonNeighbors.isEmpty()) {
-        List<Room> watsonPossibleMoves = new ArrayList<>(watsonNeighbors.values());
-        Room newWatsonRoom = watsonPossibleMoves.get(random.nextInt(watsonPossibleMoves.size()));
-        if (!newWatsonRoom
-            .getName()
-            .equalsIgnoreCase(oldWatsonRoom.getName())) { // Check if actually moved
-          this.watson.setCurrentRoom(newWatsonRoom);
-          logGameMessage(
-              "Dr. Watson moved RANDOMLY from "
-                  + oldWatsonRoom.getName()
-                  + " to "
-                  + newWatsonRoom.getName()
-                  + " (MP).");
-          broadcastToSession(
-              new NpcMovedDTO("Dr. Watson", oldWatsonRoom.getName(), newWatsonRoom.getName()),
-              null);
+      if (oldWatsonRoom != null) {
+        // NEW RULE: If a player is in the same room, Watson does not move.
+        if (occupiedRoomNames.contains(oldWatsonRoom.getName().toLowerCase())) {
+          logGameMessage("Dr. Watson stays in " + oldWatsonRoom.getName() + " (room is occupied by a player).");
+        } else {
+          Map<String, Room> watsonNeighbors = oldWatsonRoom.getNeighbors();
+          if (!watsonNeighbors.isEmpty()) {
+            // NEW RULE: Filter out occupied neighbors.
+            List<Room> possibleMoves = watsonNeighbors.values().stream()
+                    .filter(room -> !occupiedRoomNames.contains(room.getName().toLowerCase()))
+                    .collect(Collectors.toList());
+
+            if (!possibleMoves.isEmpty()) {
+              Room newWatsonRoom = possibleMoves.get(random.nextInt(possibleMoves.size()));
+              this.watson.setCurrentRoom(newWatsonRoom);
+              logGameMessage("Dr. Watson moved from " + oldWatsonRoom.getName() + " to " + newWatsonRoom.getName());
+            } else {
+              logGameMessage("Dr. Watson has no unoccupied neighbors, stays put in " + oldWatsonRoom.getName());
+            }
+          }
         }
-      } else {
-        logGameMessage(
-            "Dr. Watson in " + oldWatsonRoom.getName() + " has no neighbors, stays put (MP).");
       }
-    } else {
-      logGameMessage("Dr. Watson is not available in this case, cannot move (MP).");
     }
-    logGameMessage("NPC Movement END (MP).");
+
+    logGameMessage("NPC Movement END.");
   }
 
-  // New method to handle an ExitCommand
+
+  @Override
   public void handlePlayerExitRequest(String playerId) {
-    logGameMessage("Player " + playerId + " has requested to exit the game session.");
+    logger.info("[SESS_CTX:{}] Player {} has requested to exit the game session.", gameSession.getSessionId(), playerId);
     // Delegate the actual session termination and notification to GameSession
     gameSession.playerRequestsExit(playerId);
+  }
+
+  @Override
+  public void handlePlayerCancelLobby(String playerId) {
+    logger.info("[SESS_CTX:{}] Player {} is cancelling lobby participation.", gameSession.getSessionId(), playerId);
+    gameSession.playerCancelsLobby(playerId);
   }
 
   public void executeCommand(Command command) { // This is the method called by GameSession
@@ -1322,28 +1311,28 @@ public class GameContextServer implements GameContext, GameActionContext {
     }
 
     logGameMessage(
-        "Context executing command: "
-            + command.getClass().getSimpleName()
-            + " for player "
-            + command.getPlayerId());
+            "Context executing command: "
+                    + command.getClass().getSimpleName()
+                    + " for player "
+                    + command.getPlayerId());
 
     // --- HOST CHECKS ---
     if (command instanceof StartCaseCommand) {
       if (!isPlayerHost(command.getPlayerId())) {
         sendResponseToPlayer(
-            command.getPlayerId(),
-            new TextMessage(
-                "Only the host can directly start the case. Guests can use 'request start case'.",
-                true));
+                command.getPlayerId(),
+                new TextMessage(
+                        "Only the host can directly start the case. Guests can use 'request start case'.",
+                        true));
         return;
       }
     } else if (command instanceof InitiateFinalExamCommand) {
       if (!isPlayerHost(command.getPlayerId())) {
         sendResponseToPlayer(
-            command.getPlayerId(),
-            new TextMessage(
-                "Only the host can directly initiate the final exam. Guests can use 'request final exam'.",
-                true));
+                command.getPlayerId(),
+                new TextMessage(
+                        "Only the host can directly initiate the final exam. Guests can use 'request final exam'.",
+                        true));
         return;
       }
     }
@@ -1352,110 +1341,13 @@ public class GameContextServer implements GameContext, GameActionContext {
     command.execute(this); // 'this' is the GameActionContext for the command's logic
   }
 
-  // For saving state
-  public GameStateData getGameStateForSaving() {
-    GameStateData state = new GameStateData();
-    state.setCaseTitle(this.selectedCase.getTitle());
-    state.setSessionId(this.gameSession.getSessionId());
-    List<String> pIds = new ArrayList<>();
-    if (player1Id != null) pIds.add(player1Id);
-    if (player2Id != null) pIds.add(player2Id);
-    state.setPlayerIds(pIds);
-    state.setLastPlayedTimestamp(System.currentTimeMillis());
-    state.setCaseStarted(this.caseStarted);
-    state.setJournalEntries(this.journal.getEntries()); // Journal now stores DTOs
-    state.setDeduceCount(this.sessionDeduceCount);
-    state.setDeducedObjectsInSession(new ArrayList<>(this.deducedObjectsInSession));
-
-    Map<String, String> playerPos = new HashMap<>();
-    if (player1Detective != null && player1Detective.getCurrentRoom() != null)
-      playerPos.put(player1Id, player1Detective.getCurrentRoom().getName());
-    if (player2Detective != null && player2Detective.getCurrentRoom() != null)
-      playerPos.put(player2Id, player2Detective.getCurrentRoom().getName());
-    state.setPlayerCurrentRoomNames(playerPos);
-
-    Map<String, String> npcPos = new HashMap<>();
-    if (watson != null && watson.getCurrentRoom() != null)
-      npcPos.put("Watson", watson.getCurrentRoom().getName());
-    for (Suspect s : suspects) {
-      if (s.getCurrentRoom() != null) npcPos.put(s.getName(), s.getCurrentRoom().getName());
-    }
-    state.setNpcCurrentRoomNames(npcPos);
-
-    if (this.taskList != null) {
-      Map<String, Boolean> taskStatus = new HashMap<>();
-      // Task completion needs a proper mechanism. For now, all false or based on a new field.
-      for (String taskDesc : this.taskList.getTasks()) {
-        taskStatus.put(taskDesc, false); // Placeholder: No dynamic task completion tracking yet
-      }
-      state.setTaskCompletionStatus(taskStatus);
-    }
-    Map<String, Integer> scores = new HashMap<>();
-    Map<String, String> ranks = new HashMap<>();
-    if (player1Detective != null && player1Id != null) {
-      scores.put(player1Id, player1Detective.getFinalExamScore());
-      ranks.put(player1Id, player1Detective.getRankEnum().name()); // <<< SAVE ENUM NAME
-    }
-    if (player2Detective != null && player2Id != null) {
-      scores.put(player2Id, player2Detective.getFinalExamScore());
-      ranks.put(player2Id, player2Detective.getRankEnum().name()); // <<< SAVE ENUM NAME
-    }
-    state.setPlayerScores(scores);
-    state.setPlayerRanks(ranks);
-    return state;
+  @Override
+  public int getSessionDeduceCount() {
+    return this.sessionDeduceCount;
   }
 
-  public void applyGameState(GameStateData loadedState) {
-    logGameMessage("Applying loaded game state for session " + loadedState.getSessionId());
-    resetForNewCaseLoad(); // Start with a clean slate but keep selectedCase
-
-    this.caseStarted = loadedState.isCaseStarted();
-    if (loadedState.getJournalEntries() != null) { // Check for null before iterating
-      loadedState.getJournalEntries().forEach(this.journal::addEntry);
-    }
-    this.sessionDeduceCount = loadedState.getDeduceCount();
-    if (loadedState.getDeducedObjectsInSession() != null) {
-      this.deducedObjectsInSession = new HashSet<>(loadedState.getDeducedObjectsInSession());
-    }
-
-    // Restore NPC positions
-    if (watson != null
-        && loadedState.getNpcCurrentRoomNames() != null
-        && loadedState.getNpcCurrentRoomNames().containsKey("Watson")) {
-      watson.setCurrentRoom(getRoomByName(loadedState.getNpcCurrentRoomNames().get("Watson")));
-    }
-    for (Suspect s :
-        suspects) { // Suspects list should be repopulated by extractors based on selectedCase
-      if (loadedState.getNpcCurrentRoomNames() != null
-          && loadedState.getNpcCurrentRoomNames().containsKey(s.getName())) {
-        s.setCurrentRoom(getRoomByName(loadedState.getNpcCurrentRoomNames().get(s.getName())));
-      }
-    }
-
-    // Player IDs (player1Id, player2Id for this context) should have been set by GameSession
-    // before calling this method, based on who reconnected to the loaded game.
-    if (player1Detective != null
-        && loadedState.getPlayerCurrentRoomNames() != null
-        && loadedState.getPlayerCurrentRoomNames().containsKey(player1Id)) {
-      player1Detective.setCurrentRoom(
-          getRoomByName(loadedState.getPlayerCurrentRoomNames().get(player1Id)));
-      player1Detective.setFinalExamScore(
-          loadedState.getPlayerScores() != null
-              ? loadedState.getPlayerScores().getOrDefault(player1Id, 0)
-              : 0);
-      player1Detective.evaluateRank();
-    }
-    if (player2Detective != null
-        && loadedState.getPlayerCurrentRoomNames() != null
-        && loadedState.getPlayerCurrentRoomNames().containsKey(player2Id)) {
-      player2Detective.setCurrentRoom(
-          getRoomByName(loadedState.getPlayerCurrentRoomNames().get(player2Id)));
-      player2Detective.setFinalExamScore(
-          loadedState.getPlayerScores() != null
-              ? loadedState.getPlayerScores().getOrDefault(player2Id, 0)
-              : 0);
-      player2Detective.evaluateRank();
-    }
-    logGameMessage("Finished applying loaded game state.");
+  @Override
+  public void incrementSessionDeduceCount() {
+    this.sessionDeduceCount++;
   }
 }

@@ -18,6 +18,7 @@ public enum GameSessionState {
   ACTIVE, // Game case has officially started (e.g., after 'start case' command).
   // Both players are actively playing. All game commands are valid.
 
+
   ENDED_NORMAL, // Game concluded as expected (e.g., case solved via final exam, or a win/loss
   // condition met).
   // Session will be cleaned up.

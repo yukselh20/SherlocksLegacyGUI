@@ -1,42 +1,51 @@
-package Core;
+package Core; // Assuming 'core' is the package name
 
-import Core.enums.Rank;
 import java.io.Serializable;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 public class Detective implements Serializable {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L; // For Serializable
 
-  private final String playerId;
-  private Rank rank; // <<< CHANGED: Now uses the Rank enum
+  private final String playerId; // Changed from 'name' to 'playerId', made final
+  private Rank rank;
   private int deduceCount;
   private int finalExamScore;
   private Room currentRoom;
-  private Set<String> deducedObjects;
+  private Set<String> deducedObjects; // Tracks deduced objects by their names
 
-  // Default rank is now an enum constant
-  private static final Rank DEFAULT_RANK_ENUM = Rank.JUNIOR_INVESTIGATOR;
+  private static final String DEFAULT_RANK = "Junior Investigator";
 
   public Detective(String playerId) {
     if (playerId == null || playerId.trim().isEmpty()) {
       throw new IllegalArgumentException("Player ID cannot be null or empty.");
     }
     this.playerId = playerId;
-    resetForNewCase();
+    resetForNewCase(); // Initialize with default values
   }
 
+  /**
+   * Resets the detective's case-specific state for a new game or case. PlayerId and currentRoom
+   * (initially) are typically managed by the game context.
+   */
   public void resetForNewCase() {
-    this.rank = DEFAULT_RANK_ENUM; // <<< Use enum constant
+    this.rank = null;
     this.deduceCount = 0;
     this.finalExamScore = 0;
     this.deducedObjects = new HashSet<>();
+    // currentRoom should be set by the game context when a case starts
   }
 
+  /**
+   * Increments the deduce count only if the object hasn't been deduced before.
+   *
+   * @param objectName The name of the object being deduced.
+   * @return true if the deduce count was incremented, false if object was already deduced.
+   */
   public boolean incrementDeduceCount(String objectName) {
     if (objectName == null || objectName.trim().isEmpty()) return false;
-    if (deducedObjects.add(objectName.toLowerCase())) {
+    if (deducedObjects.add(
+        objectName.toLowerCase())) { // .add() returns true if not already present
       deduceCount++;
       return true;
     }
@@ -52,30 +61,16 @@ public class Detective implements Serializable {
     return deduceCount;
   }
 
-  public String getPlayerId() {
+  public String getPlayerId() { // Renamed from getName()
     return playerId;
   }
 
-  /**
-   * Gets the current rank of the detective.
-   *
-   * @return The Rank enum constant.
-   */
-  public Rank getRankEnum() { // <<< RENAMED for clarity, returns Enum
+  public Rank getRank() {
     return rank;
-  }
+}
 
-  /**
-   * Gets the display name of the detective's current rank.
-   *
-   * @return The string representation of the rank.
-   */
-  public String getRank() { // <<< KEPT for convenience, returns String display name
-    return rank != null ? rank.getDisplayName() : DEFAULT_RANK_ENUM.getDisplayName();
-  }
-
-  // Internal setter for rank, if needed for direct manipulation (e.g., loading saved rank)
-  // public void setRankEnum(Rank rank) { this.rank = rank; }
+  // Setter for rank might be internal if only evaluateRank changes it
+  // public void setRank(String rank) { this.rank = rank; }
 
   public void setFinalExamScore(int score) {
     this.finalExamScore = score;
@@ -93,28 +88,9 @@ public class Detective implements Serializable {
     this.currentRoom = room;
   }
 
-  public void evaluateRank() {
-    // Define thresholds for rank evaluation
-    final int SENIOR_SCORE_THRESHOLD = 3; // Example: Out of 4 questions
-    final int SENIOR_DEDUCE_MAX = 2; // Example: Max 2 deductions for Senior
-    final int MASTER_SCORE_THRESHOLD = 4; // Example: Perfect score for Master
-    final int MASTER_DEDUCE_MAX = 1; // Example: Max 1 deduction for Master
-    final int INTERMEDIATE_SCORE_THRESHOLD = 2;
-    final int INTERMEDIATE_DEDUCE_MAX = 4;
-
-    // Determine rank based on score and deductions
-    // Logic can be adjusted; this is one way to order checks
-    if (finalExamScore >= MASTER_SCORE_THRESHOLD && deduceCount <= MASTER_DEDUCE_MAX) {
-      this.rank = Rank.MASTER_DETECTIVE;
-    } else if (finalExamScore >= SENIOR_SCORE_THRESHOLD && deduceCount <= SENIOR_DEDUCE_MAX) {
-      this.rank = Rank.SENIOR_INVESTIGATOR;
-    } else if (finalExamScore >= INTERMEDIATE_SCORE_THRESHOLD
-        && deduceCount <= INTERMEDIATE_DEDUCE_MAX) {
-      this.rank = Rank.INTERMEDIATE_INVESTIGATOR;
-    } else {
-      this.rank = DEFAULT_RANK_ENUM; // Default to Junior Investigator
-    }
-  }
+  public void setRank(Rank rank) {
+    this.rank = rank;
+}
 
   @Override
   public String toString() {
@@ -123,24 +99,25 @@ public class Detective implements Serializable {
         + playerId
         + '\''
         + ", rank='"
-        + (rank != null ? rank.getDisplayName() : "N/A")
+        + rank
         + '\''
-        + // Use display name
-        ", currentRoom="
+        + ", currentRoom="
         + (currentRoom != null ? currentRoom.getName() : "None")
         + '}';
   }
 
+  // equals and hashCode if Detectives are stored in Sets or used as Map keys
+  // based on playerId
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     Detective detective = (Detective) o;
-    return Objects.equals(playerId, detective.playerId); // PlayerId is the unique identifier
+    return playerId.equals(detective.playerId);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(playerId);
+    return playerId.hashCode();
   }
 }

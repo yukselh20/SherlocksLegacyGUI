@@ -1,5 +1,7 @@
 package common.commands;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import common.dto.JournalEntryDTO;
 import common.dto.TextMessage;
 import common.interfaces.GameActionContext;
@@ -8,19 +10,23 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class JournalCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
-  private final String keyword; // Optional search keyword
+  @Serial
+  private static final long serialVersionUID = 1L;
+  private final String keyword;
 
-  public JournalCommand(String keyword) {
-    super(true); // Requires case to be started
-    this.keyword =
-        (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim().toLowerCase() : null;
+  @JsonCreator
+  public JournalCommand(@JsonProperty("keyword") String keyword) {
+    super(true);
+    this.keyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim().toLowerCase() : null;
+  }
+
+  public String getKeyword() {
+    return keyword;
   }
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
     List<JournalEntryDTO> entries = context.getJournalEntries(getPlayerId());
-
     if (entries.isEmpty()) {
       context.sendResponseToPlayer(getPlayerId(), new TextMessage("Your journal is empty.", false));
       return;
@@ -31,30 +37,19 @@ public class JournalCommand extends BaseCommand {
 
     if (this.keyword != null) {
       responseTitle = "Journal search results for '" + this.keyword + "':";
-      filteredEntries =
-          entries.stream()
-              .filter(
-                  entry ->
-                      entry.getText().toLowerCase().contains(this.keyword)
-                          || entry.getContributorPlayerId().toLowerCase().contains(this.keyword))
+      filteredEntries = entries.stream()
+              .filter(entry -> entry.getText().toLowerCase().contains(this.keyword) ||
+                      entry.getContributorPlayerId().toLowerCase().contains(this.keyword))
               .collect(Collectors.toList());
 
       if (filteredEntries.isEmpty()) {
-        context.sendResponseToPlayer(
-            getPlayerId(),
-            new TextMessage("No journal entries found matching '" + this.keyword + "'.", false));
+        context.sendResponseToPlayer(getPlayerId(), new TextMessage("No journal entries found matching '" + this.keyword + "'.", false));
         return;
       }
     }
 
-    // For simplicity, sending each entry as a separate TextMessage.
-    // A better approach for multiplayer would be to send a single DTO containing all relevant
-    // entries.
-    // e.g., common.dto.JournalDisplayDTO(String title, List<JournalEntryDTO> entries)
-    // For now, multiple messages:
     context.sendResponseToPlayer(getPlayerId(), new TextMessage(responseTitle, false));
     for (JournalEntryDTO entry : filteredEntries) {
-      // DTO's toString() method should be well-formatted for display.
       context.sendResponseToPlayer(getPlayerId(), new TextMessage(entry.toString(), false));
     }
   }

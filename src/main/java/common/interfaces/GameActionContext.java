@@ -5,75 +5,69 @@ import Core.DoctorWatson;
 import Core.Room;
 import Core.Suspect;
 import Core.TaskList;
+import JsonDTO.CaseData;
 import JsonDTO.CaseFile;
 import common.dto.JournalEntryDTO;
 import common.dto.WatsonHintResponseDTO;
 import java.io.Serializable;
 import java.util.List;
 
-/**
- * GameActionContext This is the main interface that commands use to interact with the game world's
- * state and logic during active gameplay. Implementations (like GameContextSinglePlayer or
- * GameContextServer) will provide the concrete logic for these actions.
- */
 public interface GameActionContext {
-
-  WatsonHintResponseDTO askWatsonForHint(String playerId);
 
   // --- State Checks & General Info ---
   boolean isCaseStarted();
+  void setCaseStarted(boolean started);
+  CaseData getSelectedCase();
+  Detective getPlayerDetective(String playerId);
+  Room getCurrentRoomForPlayer(String playerId);
 
-  void setCaseStarted(boolean started); // For StartCaseCommand to trigger game start
 
-  CaseFile getSelectedCase(); // To access case details like exam questions, description
 
-  Detective getPlayerDetective(String playerId); // Get specific player's state object
 
-  Room getCurrentRoomForPlayer(String playerId); // Player's current location
-
+  
   // --- World Information & Interaction ---
-  String getOccupantsDescriptionInRoom(Room room, String askingPlayerId); // Who is in a room?
-
+  String getOccupantsDescriptionInRoom(Room room, String askingPlayerId);
   TaskList getTaskList();
-
-  DoctorWatson getWatson(); // Access to Dr. Watson NPC
-
+  DoctorWatson getWatson();
   List<Suspect> getAllSuspects();
 
   // --- Core Player Actions ---
   boolean movePlayer(String playerId, String direction);
-
   void addJournalEntry(JournalEntryDTO entry);
-
-  List<JournalEntryDTO> getJournalEntries(
-      String playerId); // PlayerId might be for context/filtering
+  List<JournalEntryDTO> getJournalEntries(String playerId);
 
   // --- Communication (Abstracted for SP/MP) ---
-  void sendResponseToPlayer(String playerId, Serializable responseDto); // Send DTO to one player
-
-  void broadcastToSession(Serializable dto, String excludePlayerId); // Send DTO to all (except one)
-
-  void notifyPlayerMove(
-      String movingPlayerId, Room newRoom, Room oldRoom); // Inform other players of movement
+  void sendResponseToPlayer(String playerId, Serializable responseDto);
+  void broadcastToSession(Serializable dto, String excludePlayerId);
+  void notifyPlayerMove(String movingPlayerId, Room newRoom, Room oldRoom);
 
   // --- Exam Flow ---
-  boolean canStartFinalExam(String playerId); // Can this player initiate exam? (e.g., host check)
+  boolean canStartFinalExam(String playerId);
+  void startExamProcess(String playerId);
+  void processExamAnswer(String playerId, int questionNumber, String answerText);
 
-  void startExamProcess(String playerId); // Trigger to begin sending questions one-by-one
-
-  void processExamAnswer(
-      String playerId, int questionNumber, String answerText); // Process one answer
-
-  void updateNpcMovements(String triggeringPlayerId); // Trigger NPC movement phase
+  // --- NPC and Player Updates ---
+  void updateNpcMovements(String triggeringPlayerId);
+  void processUpdateDisplayName(String playerId, String newDisplayName);
 
   // --- Multiplayer/Session Specific Requests ---
-  void processRequestStartCase(String requestingPlayerId); // Guest requests host to start case
+  void processRequestStartCase(String requestingPlayerId);
+  void processRequestInitiateExam(String requestingPlayerId);
+  void handlePlayerExitRequest(String playerId);
+  WatsonHintResponseDTO askWatsonForHint(String playerId);
+  void handlePlayerCancelLobby(String playerId);
 
-  void processRequestInitiateExam(String requestingPlayerId); // Guest requests host to start exam
 
-  void processUpdateDisplayName(
-      String playerId, String newDisplayName); // Player wants to change their name
+    // --- ADD THESE TWO METHODS ---
+    /**
+     * Gets the total number of deductions used by all players in the session.
+     * @return The session-wide deduce count.
+     */
+    int getSessionDeduceCount();
 
-  // --- General / Utility ---
-  void handlePlayerExitRequest(String playerId); // Player wants to leave the current game/session
+    /**
+     * Increments the session-wide deduce count.
+     */
+    void incrementSessionDeduceCount();
+
 }

@@ -9,11 +9,12 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import JsonDTO.CaseData;
 
 public class BuildingExtractor {
 
   private static final Set<String> VALID_DIRECTIONS =
-      new HashSet<>(Set.of("north", "south", "east", "west", "up", "down"));
+          new HashSet<>(Set.of("north", "south", "east", "west", "up", "down"));
 
   private BuildingExtractor() {} // Utility class
 
@@ -24,7 +25,7 @@ public class BuildingExtractor {
    * @param context The GameContext (either Server or SinglePlayer) to populate.
    * @return True if the building was successfully loaded without critical errors, false otherwise.
    */
-  public static boolean loadBuilding(CaseFile caseFile, GameContext context) {
+  public static boolean loadBuilding(CaseData caseFile, GameContext context) {
     if (caseFile == null || caseFile.getRooms() == null || caseFile.getStartingRoom() == null) {
       context.logLoadingMessage("Error: CaseFile is null, or has no rooms/starting room defined.");
       return false;
@@ -39,16 +40,16 @@ public class BuildingExtractor {
       String roomName = roomData.getName();
       if (roomName == null || roomName.trim().isEmpty()) {
         context.logLoadingMessage(
-            "Warning: Skipping room with null or empty name in " + context.getContextIdForLog());
+                "Warning: Skipping room with null or empty name in " + context.getContextIdForLog());
         hasErrors = true;
         continue;
       }
       if (!roomNamesProcessed.add(roomName.toLowerCase())) {
         context.logLoadingMessage(
-            "Warning: Duplicate room name '"
-                + roomName
-                + "' found. Skipping duplicate in "
-                + context.getContextIdForLog());
+                "Warning: Duplicate room name '"
+                        + roomName
+                        + "' found. Skipping duplicate in "
+                        + context.getContextIdForLog());
         hasErrors = true;
         continue;
       }
@@ -71,12 +72,12 @@ public class BuildingExtractor {
 
           if (!VALID_DIRECTIONS.contains(direction)) {
             context.logLoadingMessage(
-                "Warning: Invalid direction '"
-                    + direction
-                    + "' for room '"
-                    + currentRoom.getName()
-                    + "'. Skipping neighbor link in "
-                    + context.getContextIdForLog());
+                    "Warning: Invalid direction '"
+                            + direction
+                            + "' for room '"
+                            + currentRoom.getName()
+                            + "'. Skipping neighbor link in "
+                            + context.getContextIdForLog());
             hasErrors = true;
             continue;
           }
@@ -86,12 +87,12 @@ public class BuildingExtractor {
             currentRoom.setNeighbor(direction, neighborRoom);
           } else {
             context.logLoadingMessage(
-                "Warning: Neighbor room '"
-                    + neighborName
-                    + "' not found for room '"
-                    + currentRoom.getName()
-                    + "'. Skipping neighbor link in "
-                    + context.getContextIdForLog());
+                    "Warning: Neighbor room '"
+                            + neighborName
+                            + "' not found for room '"
+                            + currentRoom.getName()
+                            + "'. Skipping neighbor link in "
+                            + context.getContextIdForLog());
             hasErrors = true;
           }
         }
@@ -102,10 +103,10 @@ public class BuildingExtractor {
     Room startingRoom = createdRooms.get(caseFile.getStartingRoom().toLowerCase());
     if (startingRoom == null) {
       context.logLoadingMessage(
-          "Critical Error: Starting room '"
-              + caseFile.getStartingRoom()
-              + "' not found or was invalid. Building load failed for "
-              + context.getContextIdForLog());
+              "Critical Error: Starting room '"
+                      + caseFile.getStartingRoom()
+                      + "' not found or was invalid. Building load failed for "
+                      + context.getContextIdForLog());
       return false; // Critical error
     }
     // Setting the starting room is now the responsibility of the context that *uses* this building,
@@ -116,20 +117,20 @@ public class BuildingExtractor {
       validateRoomConnectivity(context, startingRoom);
     } catch (IllegalStateException e) {
       context.logLoadingMessage(
-          "Critical Error: Room connectivity validation failed: "
-              + e.getMessage()
-              + " for "
-              + context.getContextIdForLog());
+              "Critical Error: Room connectivity validation failed: "
+                      + e.getMessage()
+                      + " for "
+                      + context.getContextIdForLog());
       return false; // Critical error
     }
 
     if (hasErrors) {
       context.logLoadingMessage(
-          "Building loaded with some non-critical errors/warnings for "
-              + context.getContextIdForLog());
+              "Building loaded with some non-critical errors/warnings for "
+                      + context.getContextIdForLog());
     } else {
       context.logLoadingMessage(
-          "Building structure loaded successfully for " + context.getContextIdForLog());
+              "Building structure loaded successfully for " + context.getContextIdForLog());
     }
     return true; // Returns true even if there were non-critical warnings
   }
@@ -158,11 +159,11 @@ public class BuildingExtractor {
     for (Room room : context.getAllRooms().values()) {
       if (!visited.contains(room)) {
         throw new IllegalStateException(
-            "Room '"
-                + room.getName()
-                + "' is unreachable from the starting room '"
-                + startRoom.getName()
-                + "'.");
+                "Room '"
+                        + room.getName()
+                        + "' is unreachable from the starting room '"
+                        + startRoom.getName()
+                        + "'.");
       }
     }
   }

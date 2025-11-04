@@ -1,17 +1,19 @@
 package common.commands;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import common.dto.HostGameRequestDTO;
 import common.interfaces.GameActionContext;
 import java.io.Serial;
 
-// common.dto.HostGameResponseDTO will be sent by the context
-
 public class HostGameCommand extends BaseCommand {
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
   private final HostGameRequestDTO payload;
 
-  public HostGameCommand(HostGameRequestDTO payload) {
-    super(false); // Does not require case to be started
+  @JsonCreator
+  public HostGameCommand(@JsonProperty("payload") HostGameRequestDTO payload) {
+    super(false);
     if (payload == null) {
       throw new IllegalArgumentException("Payload cannot be null for HostGameCommand.");
     }
@@ -24,19 +26,7 @@ public class HostGameCommand extends BaseCommand {
 
   @Override
   protected void executeCommandLogic(GameActionContext context) {
-    // The server-side GameActionContext (or GameSessionManager) handles this:
-    // 1. Validates payload.getCaseTitle().
-    // 2. Creates a new game session.
-    // 3. Generates a gameCode if private.
-    // 4. Sends a HostGameResponseDTO (with success/failure, message, sessionId, gameCode)
-    //    back to the player.
-    // This command DTO just carries the request.
-    // Conceptual call: serverLogic.processHostGameRequest(getPlayerId(), payload);
-    System.out.println(
-        "Server received HostGameCommand from player: "
-            + getPlayerId()
-            + " for case: "
-            + payload.getCaseTitle());
+    System.out.println("Server received HostGameCommand from player: " + getPlayerId() + " for case: " + payload.getCaseUniversalTitle());
   }
 
   @Override

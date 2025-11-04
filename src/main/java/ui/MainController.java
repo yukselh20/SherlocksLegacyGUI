@@ -64,6 +64,11 @@ public class MainController {
 
     // Set up split pane divider position (70% terminal, 30% status)
     bottomSplitPane.setDividerPositions(0.7);
+
+    // Initialize RoomView
+    roomView = new RoomView(this);
+    roomPane.getChildren().clear();
+    roomPane.getChildren().add(roomView);
   }
 
   /**

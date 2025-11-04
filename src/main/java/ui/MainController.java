@@ -5,18 +5,25 @@ import java.util.List;
 import client.GameClient;
 import common.NetworkConstants;
 import common.dto.RoomDescriptionDTO;
+import javafx.animation.FadeTransition;
 import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.util.Duration;
 import server.ServerMain;
 import singleplayer.SinglePlayerMain;
 import ui.util.GameOutputParser;
@@ -64,9 +71,18 @@ public class MainController {
     terminalTextArea.setEditable(false);
     terminalTextArea.setWrapText(true);
     terminalInputField.setOnAction(event -> handleTerminalInput());
-    tasksButton.setOnAction(event -> openTasksWindow());
-    journalButton.setOnAction(event -> openJournalWindow());
-    chatButton.setOnAction(event -> openChatWindow());
+    tasksButton.setOnAction(event -> {
+      playSound("click.wav");
+      openTasksWindow();
+    });
+    journalButton.setOnAction(event -> {
+      playSound("pageflip.mp3");
+      openJournalWindow();
+    });
+    chatButton.setOnAction(event -> {
+      playSound("click.wav");
+      openChatWindow();
+    });
     updateStatus("GUI Ready. Please select a game mode.");
     unreadChatLabel.setVisible(false);
     bottomSplitPane.setDividerPositions(0.7);
@@ -81,6 +97,7 @@ public class MainController {
     System.setOut(new PrintStream(taos, true));
 
     createMainMenu();
+    setupButtonIcons();
     updateUIVisibility();
   }
 
@@ -92,6 +109,35 @@ public class MainController {
       this.hostServices = hostServices;
   }
 
+  private void setupButtonIcons() {
+    setButtonIcon(tasksButton, "/icons/tasks.png");
+    setButtonIcon(journalButton, "/icons/journal.png");
+    setButtonIcon(chatButton, "/icons/chat.png");
+  }
+
+  private void setButtonIcon(Button button, String iconPath) {
+    try {
+      Image icon = new Image(getClass().getResourceAsStream(iconPath));
+      ImageView iconView = new ImageView(icon);
+      iconView.setFitHeight(20);
+      iconView.setFitWidth(20);
+      button.setGraphic(iconView);
+    } catch (Exception e) {
+      System.err.println("Could not load icon: " + iconPath);
+    }
+  }
+
+  private void playSound(String soundFile) {
+    try {
+      String soundPath = getClass().getResource("/sounds/" + soundFile).toExternalForm();
+      Media sound = new Media(soundPath);
+      MediaPlayer mediaPlayer = new MediaPlayer(sound);
+      mediaPlayer.play();
+    } catch (Exception e) {
+      System.err.println("Could not play sound: " + soundFile);
+    }
+  }
+
   private void createMainMenu() {
     mainMenuVBox = new VBox(15);
     mainMenuVBox.setAlignment(Pos.CENTER);
@@ -99,19 +145,31 @@ public class MainController {
 
     Button singlePlayerButton = new Button("Single Player");
     singlePlayerButton.getStyleClass().add("main-menu-button");
-    singlePlayerButton.setOnAction(event -> startSinglePlayer());
+    singlePlayerButton.setOnAction(event -> {
+      playSound("click.wav");
+      startSinglePlayer();
+    });
 
     Button multiplayerButton = new Button("Multiplayer (Join/Host)");
     multiplayerButton.getStyleClass().add("main-menu-button");
-    multiplayerButton.setOnAction(event -> startMultiplayer());
+    multiplayerButton.setOnAction(event -> {
+      playSound("click.wav");
+      startMultiplayer();
+    });
 
     Button startServerButton = new Button("Start Server Only");
     startServerButton.getStyleClass().add("main-menu-button");
-    startServerButton.setOnAction(event -> startServer());
+    startServerButton.setOnAction(event -> {
+      playSound("click.wav");
+      startServer();
+    });
 
     Button quitButton = new Button("Quit");
     quitButton.getStyleClass().add("main-menu-button");
-    quitButton.setOnAction(event -> shutdown());
+    quitButton.setOnAction(event -> {
+      playSound("click.wav");
+      shutdown();
+    });
 
     mainMenuVBox
         .getChildren()
@@ -120,31 +178,47 @@ public class MainController {
 
   private void updateUIVisibility() {
     Platform.runLater(() -> {
+      Node currentView = roomPane.getChildren().isEmpty() ? null : roomPane.getChildren().get(0);
+      Node nextView = null;
+
       switch (currentState) {
         case MENU:
-          roomPane.getChildren().clear();
-          roomPane.getChildren().add(mainMenuVBox);
+          nextView = mainMenuVBox;
           tasksButton.setVisible(false);
           journalButton.setVisible(false);
           chatButton.setVisible(false);
           rightInfoPanel.setVisible(false);
           break;
         case GAME_SINGLE:
-          roomPane.getChildren().clear();
-          roomPane.getChildren().add(roomView);
+          nextView = roomView;
           tasksButton.setVisible(true);
           journalButton.setVisible(true);
           chatButton.setVisible(false);
           rightInfoPanel.setVisible(true);
           break;
         case GAME_MULTI:
-          roomPane.getChildren().clear();
-          roomPane.getChildren().add(roomView);
+          nextView = roomView;
           tasksButton.setVisible(true);
           journalButton.setVisible(true);
           chatButton.setVisible(true);
           rightInfoPanel.setVisible(true);
           break;
+      }
+
+      if (currentView != nextView) {
+        final Node viewToDisplay = nextView;
+        FadeTransition ft = new FadeTransition(Duration.millis(500), currentView);
+        ft.setFromValue(1.0);
+        ft.setToValue(0.0);
+        ft.setOnFinished(event -> {
+          roomPane.getChildren().clear();
+          roomPane.getChildren().add(viewToDisplay);
+          FadeTransition ft2 = new FadeTransition(Duration.millis(500), viewToDisplay);
+          ft2.setFromValue(0.0);
+          ft2.setToValue(1.0);
+          ft2.play();
+        });
+        ft.play();
       }
     });
   }

@@ -32,8 +32,8 @@ public class GameClientFX extends Application {
     Scene scene = new Scene(root, 1280, 800);
     
     // Load CSS if available
-    String cssPath = getClass().getResource("/css/detective.css") != null 
-        ? getClass().getResource("/css/detective.css").toExternalForm() 
+    String cssPath = getClass().getResource("/css/theme_dark.css") != null
+        ? getClass().getResource("/css/theme_dark.css").toExternalForm()
         : null;
     if (cssPath != null) {
       scene.getStylesheets().add(cssPath);

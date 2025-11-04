@@ -59,7 +59,7 @@
 /* TextArea and TextField */
 .text-area, .text-field {
   -fx-background-color: #0a0a0a;
-  -fx-text-fill: #00ff00;
+  -fx-text-fill: #FFC300; /* Amber text */
   -fx-font-family: "Courier New", monospace;
 }
 
@@ -130,12 +130,12 @@
 }
 
 .scroll-bar .thumb {
-  -fx-background-color: #4a4a4a;
+  -fx-background-color: #b08d57; /* Brass color */
   -fx-background-radius: 5;
 }
 
 .scroll-bar .thumb:hover {
-  -fx-background-color: #5a5a5a;
+  -fx-background-color: #c09d67;
 }
 
 /* SplitPane */
@@ -203,18 +203,18 @@
 
 .scroll-bar:horizontal .thumb,
 .scroll-bar:vertical .thumb {
-  -fx-background-color: #4a4a4a;
+  -fx-background-color: #b08d57; /* Brass color */
   -fx-background-radius: 5;
 }
 
 .scroll-bar:horizontal .thumb:hover,
 .scroll-bar:vertical .thumb:hover {
-  -fx-background-color: #5a5a5a;
+  -fx-background-color: #c09d67;
 }
 
 .scroll-bar:horizontal .thumb:pressed,
 .scroll-bar:vertical .thumb:pressed {
-  -fx-background-color: #6a6a6a;
+  -fx-background-color: #d0ad77;
 }
 
 /* CheckBox styling */

@@ -18,10 +18,11 @@ public class MainLauncher {
     while (!exitLauncher) {
       System.out.println("\nChoose an option:");
       System.out.println("  1. Start Single Player Game");
-      System.out.println("  2. Join/Host Multiplayer Game (Start Client)");
-      System.out.println("  3. Start Game Server");
-      System.out.println("  4. Exit Application");
-      System.out.print("Enter your choice (1-4): ");
+      System.out.println("  2. Join/Host Multiplayer Game (Start Client - Terminal)");
+      System.out.println("  3. Join/Host Multiplayer Game (Start GUI Client)");
+      System.out.println("  4. Start Game Server");
+      System.out.println("  5. Exit Application");
+      System.out.print("Enter your choice (1-5): ");
 
       String choice = "";
       if (scanner.hasNextLine()) { // Check if there's input to prevent NoSuchElementException

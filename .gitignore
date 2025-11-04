@@ -43,3 +43,6 @@ bin/
 # Environment files
 *.env
 *.env.*
+
+# Log files
+app.log

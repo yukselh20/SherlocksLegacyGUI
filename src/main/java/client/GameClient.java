@@ -15,6 +15,8 @@ import java.nio.channels.SocketChannel;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,6 +37,9 @@ public class GameClient implements Runnable {
           new AtomicReference<>(ClientState.DISCONNECTED);
   private Thread networkListenerThread;
   private Scanner consoleScanner;
+  
+  // GUI input queue for JavaFX integration
+  private final BlockingQueue<String> guiInputQueue = new LinkedBlockingQueue<>();
 
   // Session-specific data
   private String playerId;

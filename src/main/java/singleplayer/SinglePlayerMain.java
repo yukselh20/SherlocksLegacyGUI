@@ -82,7 +82,7 @@ public class SinglePlayerMain {
 
         if (commandToExecute != null) {
             if (gameContext.getPlayerDetective(null) != null) {
-                commandToExecute.setPlayerId(game.getPlayerDetective(null).getPlayerId());
+                commandToExecute.setPlayerId(gameContext.getPlayerDetective(null).getPlayerId());
                 commandToExecute.execute(gameContext);
             } else {
                 System.out.println("SP_ERROR: Player detective not initialized. Cannot execute command.");

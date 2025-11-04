@@ -120,3 +120,107 @@
   -fx-background-color: #3a3a3a;
   -fx-padding: 0 1 0 1;
 }
+
+/* Alert Dialogs */
+.alert.dialog-pane {
+  -fx-background-color: #2a2a2a;
+}
+
+.alert .header-panel {
+  -fx-background-color: #3a3a3a;
+}
+
+.alert .header-panel .label {
+  -fx-text-fill: #d4af37;
+  -fx-font-weight: bold;
+  -fx-font-size: 16;
+}
+
+.alert .content.label {
+  -fx-text-fill: #cccccc;
+  -fx-font-size: 14;
+}
+
+.alert .button {
+  -fx-background-color: #3a3a3a;
+  -fx-text-fill: #d4af37;
+  -fx-font-weight: bold;
+  -fx-background-radius: 5;
+  -fx-padding: 8 20 8 20;
+}
+
+.alert .button:hover {
+  -fx-background-color: #4a4a4a;
+}
+
+.alert .button:pressed {
+  -fx-background-color: #2a2a2a;
+}
+
+/* Transitions and Animations */
+.fade-in {
+  -fx-opacity: 0;
+  -fx-transition: opacity 0.5s ease-in;
+}
+
+.fade-in:hover {
+  -fx-opacity: 1;
+}
+
+/* Custom Scrollbar for better aesthetics */
+.scroll-bar:horizontal .track,
+.scroll-bar:vertical .track {
+  -fx-background-color: #2a2a2a;
+  -fx-border-color: #1a1a1a;
+}
+
+.scroll-bar:horizontal .thumb,
+.scroll-bar:vertical .thumb {
+  -fx-background-color: #4a4a4a;
+  -fx-background-radius: 5;
+}
+
+.scroll-bar:horizontal .thumb:hover,
+.scroll-bar:vertical .thumb:hover {
+  -fx-background-color: #5a5a5a;
+}
+
+.scroll-bar:horizontal .thumb:pressed,
+.scroll-bar:vertical .thumb:pressed {
+  -fx-background-color: #6a6a6a;
+}
+
+/* CheckBox styling */
+.check-box {
+  -fx-text-fill: #cccccc;
+}
+
+.check-box .box {
+  -fx-background-color: #2a2a2a;
+  -fx-border-color: #d4af37;
+  -fx-border-width: 2;
+  -fx-background-radius: 3;
+}
+
+.check-box:selected .mark {
+  -fx-background-color: #d4af37;
+}
+
+.check-box:hover .box {
+  -fx-background-color: #3a3a3a;
+}
+
+/* VBox and HBox */
+.vbox, .hbox {
+  -fx-background-color: transparent;
+}
+
+/* Pane styling */
+.pane {
+  -fx-background-color: transparent;
+}
+
+/* StackPane */
+.stack-pane {
+  -fx-background-color: transparent;
+}

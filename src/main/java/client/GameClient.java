@@ -71,6 +71,24 @@ public class GameClient implements Runnable {
     this.playerDisplayId = "Player" + (int) (Math.random() * 9000 + 1000);
   }
 
+  /**
+   * Enqueues user input from the GUI to be processed by the game client.
+   * This method allows the JavaFX GUI to send commands to the client without
+   * directly calling the console scanner.
+   *
+   * @param input The user input string to process
+   */
+  public void enqueueUserInput(String input) {
+    if (input != null && !input.trim().isEmpty()) {
+      try {
+        guiInputQueue.offer(input.trim());
+        log("GUI input enqueued: " + input);
+      } catch (Exception e) {
+        logError("Failed to enqueue GUI input: " + input, e);
+      }
+    }
+  }
+
   @Override
   public void run() {
     this.consoleScanner = new Scanner(System.in);

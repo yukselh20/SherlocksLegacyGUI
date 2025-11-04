@@ -79,6 +79,11 @@ public class MainController {
 
     // Redirect System.out to the terminal TextArea
     TextAreaOutputStream taos = new TextAreaOutputStream(terminalTextArea);
+    
+    // Set up output parser
+    ui.util.GameOutputParser parser = new ui.util.GameOutputParser(this);
+    taos.setParser(parser);
+    
     PrintStream ps = new PrintStream(taos, true);
     System.setOut(ps);
 

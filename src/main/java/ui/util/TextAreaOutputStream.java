@@ -1,0 +1,57 @@
+package ui.util;
+
+import javafx.application.Platform;
+import javafx.scene.control.TextArea;
+
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Custom OutputStream that redirects output to a JavaFX TextArea.
+ * Ensures UI updates happen on the JavaFX Application Thread.
+ */
+public class TextAreaOutputStream extends OutputStream {
+  private final TextArea textArea;
+  private final StringBuilder buffer = new StringBuilder();
+
+  public TextAreaOutputStream(TextArea textArea) {
+    this.textArea = textArea;
+  }
+
+  @Override
+  public void write(int b) {
+    // Convert byte to char and append to buffer
+    buffer.append((char) b);
+
+    // If we encounter a newline, flush the buffer to the TextArea
+    if (b == '\n') {
+      flush();
+    }
+  }
+
+  @Override
+  public void write(byte[] b, int off, int len) {
+    String text = new String(b, off, len, StandardCharsets.UTF_8);
+    buffer.append(text);
+
+    // If the text contains a newline, flush
+    if (text.contains("\n")) {
+      flush();
+    }
+  }
+
+  @Override
+  public void flush() {
+    if (buffer.length() > 0) {
+      final String text = buffer.toString();
+      buffer.setLength(0); // Clear buffer
+
+      // Update UI on JavaFX Application Thread
+      Platform.runLater(() -> {
+        textArea.appendText(text);
+        // Auto-scroll to bottom
+        textArea.setScrollTop(Double.MAX_VALUE);
+      });
+    }
+  }
+}

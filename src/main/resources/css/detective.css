@@ -1,10 +1,12 @@
 /* Detective Game - Dark Theme CSS */
+/* Inspired by Victorian detective aesthetic with modern touches */
 
 .root {
   -fx-base: #1a1a1a;
   -fx-background: #0a0a0a;
   -fx-accent: #d4af37; /* Gold accent */
   -fx-focus-color: #d4af37;
+  -fx-font-family: "Georgia", "Times New Roman", serif;
 }
 
 /* Top Buttons */

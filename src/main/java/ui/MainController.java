@@ -1,10 +1,12 @@
 package ui;
 
 import client.GameClient;
+import common.dto.RoomDescriptionDTO;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import ui.util.RoomView;
 import ui.util.TextAreaOutputStream;
 import ui.windows.ChatWindow;
 import ui.windows.JournalWindow;
@@ -34,6 +36,7 @@ public class MainController {
   private JournalWindow journalWindow;
   private ChatWindow chatWindow;
   private TasksWindow tasksWindow;
+  private RoomView roomView;
   private int unreadChatCount = 0;
 
   /**

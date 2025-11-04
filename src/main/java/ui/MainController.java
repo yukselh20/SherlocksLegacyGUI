@@ -204,4 +204,61 @@ public class MainController {
   public GameClient getGameClient() {
     return gameClient;
   }
+
+  /**
+   * Updates the room view with a new room description.
+   * This should be called when a RoomDescriptionDTO is received from the server.
+   */
+  public void updateRoomView(RoomDescriptionDTO roomDescription) {
+    if (roomView != null && roomDescription != null) {
+      javafx.application.Platform.runLater(() -> {
+        roomView.loadRoom(roomDescription);
+        updateRightPanel(roomDescription);
+        updateStatus("Current room: " + roomDescription.getName());
+      });
+    }
+  }
+
+  /**
+   * Updates the right information panel with room details.
+   */
+  private void updateRightPanel(RoomDescriptionDTO roomDescription) {
+    // Update right panel lists
+    // Note: In the FXML, we have ListViews that we need to access programmatically
+    // For now, we'll update this via the room view itself
+    // In a full implementation, we'd get references to those ListViews and update them
+  }
+
+  /**
+   * Shows a speech bubble response in the room view.
+   */
+  public void showRoomResponse(String targetName, String response) {
+    if (roomView != null) {
+      javafx.application.Platform.runLater(() -> {
+        roomView.showResponseBubble(targetName, response);
+      });
+    }
+  }
+
+  /**
+   * Adds a journal entry (called when journal updates are received).
+   */
+  public void addJournalEntry(String entry) {
+    if (journalWindow != null) {
+      javafx.application.Platform.runLater(() -> {
+        journalWindow.addEntry(entry);
+      });
+    }
+  }
+
+  /**
+   * Adds a chat message (called when chat messages are received).
+   */
+  public void addChatMessage(String sender, String message) {
+    if (chatWindow != null) {
+      javafx.application.Platform.runLater(() -> {
+        chatWindow.addChatMessage(sender, message);
+      });
+    }
+  }
 }

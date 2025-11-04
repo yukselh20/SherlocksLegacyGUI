@@ -63,6 +63,7 @@ public class GameClient implements Runnable {
   private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
   private final ReentrantLock consoleLock = new ReentrantLock();
   private final java.io.PrintStream out;
+  private final boolean isGuiMode;
 
   public GameClient(String host, int port, ui.util.TextAreaOutputStream taos) {
     this.host = host;
@@ -70,8 +71,10 @@ public class GameClient implements Runnable {
     this.playerDisplayId = "Player" + (int) (Math.random() * 9000 + 1000);
     if (taos != null) {
       this.out = new java.io.PrintStream(taos, true);
+      this.isGuiMode = true;
     } else {
       this.out = System.out;
+      this.isGuiMode = false;
     }
   }
 
@@ -140,32 +143,27 @@ public class GameClient implements Runnable {
       // Use the enum's property directly
       if (cs.isInteractive()) {
         String input = null;
-        
-        // First, check if there's input from the GUI queue (non-blocking)
-        input = guiInputQueue.poll();
-        
-        // If no GUI input, check console input (with timeout to allow GUI input checking)
-        if (input == null) {
-          try {
-            // Use a short timeout to periodically check GUI queue
-            input = guiInputQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
-          } catch (InterruptedException e) {
-            if (!running.get()) break;
-            Thread.currentThread().interrupt();
+        try {
+          if (isGuiMode) {
+            // GUI mode: Block and wait for input from the GUI thread only.
+            input = guiInputQueue.take();
+          } else {
+            // Console mode: Block and wait for input from System.in.
+            if (consoleScanner != null && consoleScanner.hasNextLine()) {
+              input = consoleScanner.nextLine();
+            }
           }
-          
-          // If still no input from GUI, check console
-          if (input == null && consoleScanner != null && consoleScanner.hasNextLine()) {
-            input = consoleScanner.nextLine();
-          }
+        } catch (InterruptedException e) {
+          if (!running.get()) break;
+          Thread.currentThread().interrupt();
         }
-        
-        // Process input if we got any
+
         if (input != null && !input.isEmpty()) {
           processUserInputBasedOnState(input.trim());
         }
       } else {
-        // In a non-interactive state, still check GUI queue
+        // For non-interactive (waiting) states, we still need to process potential
+        // "cancel" commands from the GUI. We use poll() to avoid getting stuck.
         try {
           String guiInput = guiInputQueue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS);
           if (guiInput != null && !guiInput.isEmpty()) {

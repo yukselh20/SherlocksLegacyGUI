@@ -138,22 +138,38 @@ public class GameClient implements Runnable {
 
       // Use the enum's property directly
       if (cs.isInteractive()) {
-        String input = "";
-        if (consoleScanner != null && consoleScanner.hasNextLine()) {
-          input = consoleScanner.nextLine();
-        } else {
-          /* ... (handle scanner closed) ... */
-          break;
-        }
+        String input = null;
+        
+        // First, check if there's input from the GUI queue (non-blocking)
+        input = guiInputQueue.poll();
+        
+        // If no GUI input, check console input (with timeout to allow GUI input checking)
         if (input == null) {
-          /* ... */
-          break;
+          try {
+            // Use a short timeout to periodically check GUI queue
+            input = guiInputQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+          } catch (InterruptedException e) {
+            if (!running.get()) break;
+            Thread.currentThread().interrupt();
+          }
+          
+          // If still no input from GUI, check console
+          if (input == null && consoleScanner != null && consoleScanner.hasNextLine()) {
+            input = consoleScanner.nextLine();
+          }
         }
-        processUserInputBasedOnState(input.trim());
+        
+        // Process input if we got any
+        if (input != null && !input.isEmpty()) {
+          processUserInputBasedOnState(input.trim());
+        }
       } else {
-        // In a non-interactive state
+        // In a non-interactive state, still check GUI queue
         try {
-          Thread.sleep(200);
+          String guiInput = guiInputQueue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS);
+          if (guiInput != null && !guiInput.isEmpty()) {
+            processUserInputBasedOnState(guiInput.trim());
+          }
         } catch (InterruptedException e) {
           if (!running.get()) break;
           Thread.currentThread().interrupt();

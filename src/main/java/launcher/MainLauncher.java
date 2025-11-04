@@ -55,6 +55,16 @@ public class MainLauncher {
           break;
 
         case "3":
+          printHeader("Launching GUI Client");
+          try {
+            ui.GameClientFX.main(passThroughArgs); // Launch JavaFX GUI
+          } catch (Exception e) {
+            handleModeError("GUI Client", e);
+          }
+          printHeader("Returned from GUI Client");
+          break;
+
+        case "4":
           printHeader("Launching Game Server");
           try {
             ServerMain.main(passThroughArgs); // ServerMain manages its own threads and console
@@ -65,13 +75,13 @@ public class MainLauncher {
           printHeader("Returned from Game Server process"); // When ServerMain's console loop ends
           break;
 
-        case "4":
+        case "5":
           System.out.println("\nExiting application. Goodbye!");
           exitLauncher = true;
           break;
 
         default:
-          System.out.println("\nInvalid choice. Please enter a number between 1 and 4.");
+          System.out.println("\nInvalid choice. Please enter a number between 1 and 5.");
           break;
       }
       // The "Press Enter to return" is removed for simplicity with blocking calls.

@@ -1,10 +1,15 @@
 package ui;
 
+import client.GameClient;
+import client.GameClientStateListener;
+import common.NetworkConstants;
+import common.dto.PublicGameInfoDTO;
+import common.dto.RoomDescriptionDTO;
+import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.List;
-import client.GameClient;
-import common.NetworkConstants;
-import common.dto.RoomDescriptionDTO;
 import javafx.animation.FadeTransition;
 import javafx.application.HostServices;
 import javafx.application.Platform;
@@ -33,7 +38,7 @@ import ui.windows.ChatWindow;
 import ui.windows.JournalWindow;
 import ui.windows.TasksWindow;
 
-public class MainController {
+public class MainController implements GameClientStateListener {
 
   private enum UIState {
     MENU,
@@ -66,6 +71,8 @@ public class MainController {
   private HostServices hostServices;
   private UIState currentState = UIState.MENU;
 
+  private PipedOutputStream pipedOutputStream;
+
   @FXML
   public void initialize() {
     terminalTextArea.setEditable(false);
@@ -90,11 +97,19 @@ public class MainController {
     roomView = new RoomView(this);
     roomPane.getChildren().add(roomView);
 
-    // Redirect System.out to the terminal TextArea
+    // Redirect System.out and System.in
     TextAreaOutputStream taos = new TextAreaOutputStream(terminalTextArea);
     GameOutputParser parser = new GameOutputParser(this);
     taos.setParser(parser);
     System.setOut(new PrintStream(taos, true));
+
+    try {
+      pipedOutputStream = new PipedOutputStream();
+      PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream);
+      System.setIn(pipedInputStream);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
     createMainMenu();
     setupButtonIcons();
@@ -247,6 +262,7 @@ public class MainController {
     int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);
 
     gameClient = new GameClient(host, port);
+    gameClient.setListener(this);
 
     gameClientThread = new Thread(() -> {
       try {
@@ -314,11 +330,13 @@ public class MainController {
 
   @FXML
   private void handleTerminalInput() {
-    String input = terminalInputField.getText().trim();
+    String input = terminalInputField.getText().trim() + "\n";
     if (!input.isEmpty()) {
-      terminalTextArea.appendText("> " + input + "\n");
-      if (gameClient != null) {
-        gameClient.enqueueUserInput(input);
+      try {
+        pipedOutputStream.write(input.getBytes());
+        pipedOutputStream.flush();
+      } catch (IOException e) {
+        e.printStackTrace();
       }
       terminalInputField.clear();
     }
@@ -425,5 +443,206 @@ public class MainController {
         chatWindow.addChatMessage(sender, message);
       });
     }
+  }
+
+  @Override
+  public void onDisconnected() {
+    Platform.runLater(() -> {
+      VBox disconnectedBox = new VBox(15);
+      disconnectedBox.setAlignment(Pos.CENTER);
+      Label label = new Label("Disconnected from server.");
+      Button reconnectButton = new Button("Reconnect");
+      reconnectButton.setOnAction(event -> sendCommand("connect"));
+      disconnectedBox.getChildren().addAll(label, reconnectButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(disconnectedBox);
+    });
+  }
+
+  @Override
+  public void onConnecting() {
+    Platform.runLater(() -> {
+      VBox connectingBox = new VBox(15);
+      connectingBox.setAlignment(Pos.CENTER);
+      Label label = new Label("Connecting to server...");
+      connectingBox.getChildren().add(label);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(connectingBox);
+    });
+  }
+
+  @Override
+  public void onConnected() {
+    // This will shortly be followed by onMainMenu
+  }
+
+  @Override
+  public void onMainMenu() {
+    Platform.runLater(() -> {
+      VBox menuBox = new VBox(15);
+      menuBox.setAlignment(Pos.CENTER);
+      Button hostButton = new Button("Host Game");
+      hostButton.setOnAction(event -> sendCommand("1"));
+      Button joinButton = new Button("Join Game");
+      joinButton.setOnAction(event -> sendCommand("2"));
+      Button backButton = new Button("Back to Main Menu");
+      backButton.setOnAction(event -> {
+        gameClient.stopClient();
+        currentState = UIState.MENU;
+        updateUIVisibility();
+      });
+      menuBox.getChildren().addAll(hostButton, joinButton, backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(menuBox);
+    });
+  }
+
+  @Override
+  public void onHostGameOptions() {
+    Platform.runLater(() -> {
+      VBox hostOptionsBox = new VBox(15);
+      hostOptionsBox.setAlignment(Pos.CENTER);
+      Button publicButton = new Button("Host Public Game");
+      publicButton.setOnAction(event -> sendCommand("1"));
+      Button privateButton = new Button("Host Private Game");
+      privateButton.setOnAction(event -> sendCommand("2"));
+      Button backButton = new Button("Back");
+      backButton.setOnAction(event -> sendCommand("3"));
+      hostOptionsBox.getChildren().addAll(publicButton, privateButton, backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(hostOptionsBox);
+    });
+  }
+
+  @Override
+  public void onCaseSelection(List<JsonDTO.CaseFile> cases) {
+    Platform.runLater(() -> {
+      VBox caseSelectionBox = new VBox(15);
+      caseSelectionBox.setAlignment(Pos.CENTER);
+      for (int i = 0; i < cases.size(); i++) {
+        final int caseNum = i + 1;
+        Button caseButton = new Button(cases.get(i).getUniversalTitle());
+        caseButton.setOnAction(event -> sendCommand(String.valueOf(caseNum)));
+        caseSelectionBox.getChildren().add(caseButton);
+      }
+      Button backButton = new Button("Back");
+      backButton.setOnAction(event -> sendCommand("0"));
+      caseSelectionBox.getChildren().add(backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(caseSelectionBox);
+    });
+  }
+
+  @Override
+  public void onLanguageSelection(JsonDTO.CaseFile caseFile) {
+    Platform.runLater(() -> {
+      VBox langSelectionBox = new VBox(15);
+      langSelectionBox.setAlignment(Pos.CENTER);
+      List<String> langCodes = new java.util.ArrayList<>(caseFile.getLocalizations().keySet());
+      java.util.Collections.sort(langCodes);
+      for (int i = 0; i < langCodes.size(); i++) {
+        final int langNum = i + 1;
+        String langCode = langCodes.get(i);
+        Button langButton = new Button(caseFile.getLocalizations().get(langCode).getLanguageName());
+        langButton.setOnAction(event -> sendCommand(String.valueOf(langNum)));
+        langSelectionBox.getChildren().add(langButton);
+      }
+      Button backButton = new Button("Back");
+      backButton.setOnAction(event -> sendCommand("0"));
+      langSelectionBox.getChildren().add(backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(langSelectionBox);
+    });
+  }
+
+  @Override
+  public void onHostingLobby(String gameCode) {
+    Platform.runLater(() -> {
+      VBox lobbyBox = new VBox(15);
+      lobbyBox.setAlignment(Pos.CENTER);
+      Label label = new Label("Waiting for another player to join...");
+      if (gameCode != null) {
+        Label codeLabel = new Label("Private Game Code: " + gameCode);
+        lobbyBox.getChildren().add(codeLabel);
+      }
+      Button cancelButton = new Button("Cancel");
+      cancelButton.setOnAction(event -> sendCommand("cancel"));
+      lobbyBox.getChildren().addAll(label, cancelButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(lobbyBox);
+    });
+  }
+
+  @Override
+  public void onJoinGameOptions() {
+    Platform.runLater(() -> {
+      VBox joinOptionsBox = new VBox(15);
+      joinOptionsBox.setAlignment(Pos.CENTER);
+      Button publicButton = new Button("Join Public Game");
+      publicButton.setOnAction(event -> sendCommand("1"));
+      Button privateButton = new Button("Join Private Game");
+      privateButton.setOnAction(event -> sendCommand("2"));
+      Button backButton = new Button("Back");
+      backButton.setOnAction(event -> sendCommand("3"));
+      joinOptionsBox.getChildren().addAll(publicButton, privateButton, backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(joinOptionsBox);
+    });
+  }
+
+  @Override
+  public void onPublicGamesList(List<PublicGameInfoDTO> games) {
+    Platform.runLater(() -> {
+      VBox gamesBox = new VBox(15);
+      gamesBox.setAlignment(Pos.CENTER);
+      for (int i = 0; i < games.size(); i++) {
+        final int gameNum = i + 1;
+        PublicGameInfoDTO game = games.get(i);
+        Button gameButton = new Button(game.getCaseTitle() + " hosted by " + game.getHostPlayerDisplayId());
+        gameButton.setOnAction(event -> sendCommand(String.valueOf(gameNum)));
+        gamesBox.getChildren().add(gameButton);
+      }
+      Button backButton = new Button("Back");
+      backButton.setOnAction(event -> sendCommand("0"));
+      gamesBox.getChildren().add(backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(gamesBox);
+    });
+  }
+
+  @Override
+  public void onPrivateGameEntry() {
+    Platform.runLater(() -> {
+      VBox privateGameBox = new VBox(15);
+      privateGameBox.setAlignment(Pos.CENTER);
+      Label label = new Label("Enter Private Game Code:");
+      TextField codeField = new TextField();
+      codeField.setOnAction(event -> sendCommand(codeField.getText()));
+      Button backButton = new Button("Back");
+      backButton.setOnAction(event -> sendCommand("cancel"));
+      privateGameBox.getChildren().addAll(label, codeField, backButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(privateGameBox);
+    });
+  }
+
+  @Override
+  public void onLobby() {
+    Platform.runLater(() -> {
+      VBox lobbyBox = new VBox(15);
+      lobbyBox.setAlignment(Pos.CENTER);
+      Label label = new Label("In lobby, waiting for host to start the game...");
+      Button cancelButton = new Button("Cancel");
+      cancelButton.setOnAction(event -> sendCommand("cancel"));
+      lobbyBox.getChildren().addAll(label, cancelButton);
+      roomPane.getChildren().clear();
+      roomPane.getChildren().add(lobbyBox);
+    });
+  }
+
+  @Override
+  public void onInGame() {
+    currentState = UIState.GAME_MULTI;
+    updateUIVisibility();
   }
 }

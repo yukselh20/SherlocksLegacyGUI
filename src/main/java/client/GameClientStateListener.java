@@ -1,0 +1,21 @@
+package client;
+
+import java.util.List;
+import JsonDTO.CaseFile;
+import common.dto.PublicGameInfoDTO;
+
+public interface GameClientStateListener {
+  void onDisconnected();
+  void onConnecting();
+  void onConnected();
+  void onMainMenu();
+  void onHostGameOptions();
+  void onCaseSelection(List<CaseFile> cases);
+  void onLanguageSelection(CaseFile caseFile);
+  void onHostingLobby(String gameCode);
+  void onJoinGameOptions();
+  void onPublicGamesList(List<PublicGameInfoDTO> games);
+  void onPrivateGameEntry();
+  void onLobby();
+  void onInGame();
+}

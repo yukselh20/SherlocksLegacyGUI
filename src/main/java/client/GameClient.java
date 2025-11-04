@@ -6,7 +6,6 @@ import common.NetworkConstants;
 import common.SerializationUtils;
 import common.commands.*;
 import common.dto.*;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.ConnectException;
@@ -21,7 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,10 +32,11 @@ public class GameClient implements Runnable {
   private final AtomicBoolean running = new AtomicBoolean(true);
   private final AtomicBoolean connected = new AtomicBoolean(false);
   private final AtomicReference<ClientState> currentState =
-          new AtomicReference<>(ClientState.DISCONNECTED);
+      new AtomicReference<>(ClientState.DISCONNECTED);
   private Thread networkListenerThread;
   private Scanner consoleScanner;
-  
+  private GameClientStateListener listener;
+
   // GUI input queue for JavaFX integration
   private final BlockingQueue<String> guiInputQueue = new LinkedBlockingQueue<>();
 
@@ -61,8 +60,7 @@ public class GameClient implements Runnable {
   private ClientState preWaitingState;
   private boolean intentToHostPublic;
 
-  private static final DateTimeFormatter TIME_FORMATTER =
-          DateTimeFormatter.ofPattern("HH:mm:ss");
+  private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
   private final ReentrantLock consoleLock = new ReentrantLock();
 
   public GameClient(String host, int port) {
@@ -71,13 +69,10 @@ public class GameClient implements Runnable {
     this.playerDisplayId = "Player" + (int) (Math.random() * 9000 + 1000);
   }
 
-  /**
-   * Enqueues user input from the GUI to be processed by the game client.
-   * This method allows the JavaFX GUI to send commands to the client without
-   * directly calling the console scanner.
-   *
-   * @param input The user input string to process
-   */
+  public void setListener(GameClientStateListener listener) {
+    this.listener = listener;
+  }
+
   public void enqueueUserInput(String input) {
     if (input != null && !input.trim().isEmpty()) {
       try {
@@ -105,11 +100,11 @@ public class GameClient implements Runnable {
         if (cs == ClientState.RECONNECTING) {
           if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             printToConsole(
-                    "Attempting to reconnect ("
-                            + (reconnectAttempts + 1)
-                            + "/"
-                            + MAX_RECONNECT_ATTEMPTS
-                            + ")...");
+                "Attempting to reconnect ("
+                    + (reconnectAttempts + 1)
+                    + "/"
+                    + MAX_RECONNECT_ATTEMPTS
+                    + ")...");
             try {
               Thread.sleep(RECONNECT_DELAY_MS);
             } catch (InterruptedException e) {
@@ -184,124 +179,52 @@ public class GameClient implements Runnable {
     consoleLock.lock();
     try {
       ClientState cs = currentState.get();
-      if (consoleScanner == null && cs.isInteractive()) {
-        return;
-      }
-      System.out.println(); // Start with a newline for better separation
-
-      switch (cs) {
-        case CONNECTED_IDLE:
-          printToConsole("--- Main Menu (Connected as " + playerDisplayId + ") ---");
-          printToConsole("1. Host Game");
-          printToConsole("2. Join Game");
-          printToConsole("3. Change Display Name (use: /setname <new_name>)");
-          printToConsole("4. Quit Client");
-          System.out.print("Enter your choice (1-4): ");
-          break;
-
-        case SELECTING_HOST_TYPE:
-          printToConsole("--- Host Game Options ---");
-          printToConsole("1. Host Public Game");
-          printToConsole("2. Host Private Game");
-          printToConsole("3. Back to Main Menu");
-          System.out.print("Enter your choice (1-3): ");
-          break;
-
-        case SELECTING_HOST_CASE:
-          System.out.print("Enter case number to host, or 0 to return to Host Options: ");
-          break;
-
-        case SELECTING_HOST_LANGUAGE:
-          System.out.print("Enter language number to host, or 0 to go back to case selection: ");
-          break;
-
-        case HOSTING_LOBBY_WAITING:
-          System.out.print(
-                  "Waiting for another player... (Type 'cancel' to return to menu): ");
-          break;
-
-        case SELECTING_JOIN_TYPE:
-          printToConsole("--- Join Game Options ---");
-          printToConsole("1. Join Public Game");
-          printToConsole("2. Join Private Game");
-          printToConsole("3. Back to Main Menu");
-          System.out.print("Enter your choice (1-3): ");
-          break;
-
-        case VIEWING_PUBLIC_GAMES:
-          System.out.print("Enter game number to join, or 0 to return to Join Options: ");
-          break;
-
-        case ENTERING_PRIVATE_CODE:
-          System.out.print("Enter the private game code (or type 'cancel' to go back): ");
-          break;
-
-        case IN_LOBBY_AWAITING_START:
-          String hostInfo =
-                  (hostPlayerIdInSession != null
-                          ? hostPlayerIdInSession.substring(
-                          0, Math.min(8, hostPlayerIdInSession.length()))
-                          + ".."
-                          : "N/A");
-          System.out.print(
-                  "Lobby ready! Host (" + hostInfo + ") should type 'start case'. " +
-                          "Guests can 'request start case'. Type '/c <message>' or 'cancel' to leave: ");
-          break;
-
-        case IN_GAME:
-          String sessionPrefix =
-                  (currentSessionId != null && currentSessionId.length() >= 4)
-                          ? currentSessionId.substring(0, 4)
-                          : (currentSessionId != null ? currentSessionId : "GAME");
-          System.out.print(playerDisplayId + " [" + sessionPrefix + "]> ");
-          break;
-
-        case ANSWERING_FINAL_EXAM_Q:
-          System.out.print(
-                  "Host, your answer for Q" + currentExamQuestionNumberBeingAnswered + ": ");
-          break;
-
-        case REQUESTING_CASE_LIST_FOR_HOST:
-        case REQUESTING_PUBLIC_GAMES:
-        case SENDING_HOST_REQUEST:
-        case SENDING_JOIN_PUBLIC_REQUEST:
-        case SENDING_JOIN_PRIVATE_REQUEST:
-        case ATTEMPTING_FINAL_EXAM:
-        case SUBMITTING_EXAM_ANSWER:
-          printToConsole("Waiting for server response... (type 'cancel' to go back)");
-          break;
-
-        case VIEWING_EXAM_RESULT:
-          printToConsole("(Exam results displayed. Now back in game.)");
-          break;
-
-        case CONNECTING:
-          printToConsole("Connecting to server... Please wait.");
-          break;
-
-        case RECONNECTING:
-          printToConsole(
-                  "Attempting to reconnect... ("
-                          + (reconnectAttempts)
-                          + "/"
-                          + MAX_RECONNECT_ATTEMPTS
-                          + ") Please wait. (Type 'quit' to stop trying)");
-          break;
-
-        case DISCONNECTED:
-          printToConsole("You are disconnected from the server.");
-          System.out.print("Type 'connect' to try again, or 'quit' to exit: ");
-          break;
-
-        case EXITING:
-          printToConsole("Exiting client...");
-          break;
-
-        default:
-          if (cs.isInteractive()) {
-            System.out.print(playerDisplayId + "[" + cs.name() + "]> ");
-          }
-          break;
+      if (listener != null) {
+        switch (cs) {
+          case CONNECTED_IDLE:
+            listener.onMainMenu();
+            break;
+          case SELECTING_HOST_TYPE:
+            listener.onHostGameOptions();
+            break;
+          case SELECTING_HOST_CASE:
+            listener.onCaseSelection(availableCasesCache);
+            break;
+          case SELECTING_HOST_LANGUAGE:
+            listener.onLanguageSelection(availableCasesCache.get(caseIndexForLanguageSelection));
+            break;
+          case HOSTING_LOBBY_WAITING:
+            listener.onHostingLobby(null);
+            break;
+          case SELECTING_JOIN_TYPE:
+            listener.onJoinGameOptions();
+            break;
+          case VIEWING_PUBLIC_GAMES:
+            listener.onPublicGamesList(publicGamesCache);
+            break;
+          case ENTERING_PRIVATE_CODE:
+            listener.onPrivateGameEntry();
+            break;
+          case IN_LOBBY_AWAITING_START:
+            listener.onLobby();
+            break;
+          case IN_GAME:
+            listener.onInGame();
+            break;
+          case CONNECTING:
+            listener.onConnecting();
+            break;
+          case DISCONNECTED:
+            listener.onDisconnected();
+            break;
+          default:
+            // For other states, we can still print to console
+            printToConsole("State: " + cs.name());
+            break;
+        }
+      } else {
+        // Fallback to console if no listener
+        printToConsole("State: " + cs.name());
       }
     } finally {
       consoleLock.unlock();
@@ -334,7 +257,7 @@ public class GameClient implements Runnable {
     }
 
     if ((cs == ClientState.DISCONNECTED || cs == ClientState.RECONNECTING)
-            && input.equalsIgnoreCase("connect")) {
+        && input.equalsIgnoreCase("connect")) {
       this.reconnectAttempts = 0;
       attemptConnect();
       return;
@@ -416,7 +339,9 @@ public class GameClient implements Runnable {
       case SENDING_JOIN_PRIVATE_REQUEST:
       case ATTEMPTING_FINAL_EXAM:
       case SUBMITTING_EXAM_ANSWER:
-        if (!input.equalsIgnoreCase("cancel") && !input.equalsIgnoreCase("quit") && !input.isEmpty()) {
+        if (!input.equalsIgnoreCase("cancel")
+            && !input.equalsIgnoreCase("quit")
+            && !input.isEmpty()) {
           // The prompt for these states already says "Waiting... (type 'cancel'...)"
         }
         break;
@@ -424,7 +349,7 @@ public class GameClient implements Runnable {
       default:
         if (cs.isInteractive() && !isChatCommand(input) && !input.isEmpty()) {
           printToConsole(
-                  "Command '" + input + "' not applicable in current state: " + cs + ". Type 'help'.");
+              "Command '" + input + "' not applicable in current state: " + cs + ". Type 'help'.");
         }
         break;
     }
@@ -436,18 +361,15 @@ public class GameClient implements Runnable {
       return;
     }
 
-    CommandParserClient.ParsedCommandData parsedData =
-            CommandParserClient.parse(input);
+    CommandParserClient.ParsedCommandData parsedData = CommandParserClient.parse(input);
 
-    if (parsedData == null || parsedData.commandName == null ||
-            parsedData.commandName.isEmpty()) {
+    if (parsedData == null || parsedData.commandName == null || parsedData.commandName.isEmpty()) {
       printToConsole("Invalid command format (parser returned null or empty command name).");
       return;
     }
 
     Command commandToExecute =
-            CommandFactoryClient.createCommand(
-                    parsedData, isThisClientTheHost(), currentStateForCommand);
+        CommandFactoryClient.createCommand(parsedData, isThisClientTheHost(), currentStateForCommand);
 
     if (commandToExecute != null) {
       updateClientStateBeforeSending(commandToExecute);
@@ -455,9 +377,9 @@ public class GameClient implements Runnable {
     } else {
       // Simplified error handling. Assume factory prints specific errors for known commands.
       printToConsole(
-              "Unknown command: '"
-                      + parsedData.commandName
-                      + "' or not applicable now. Type 'help'.");
+          "Unknown command: '"
+              + parsedData.commandName
+              + "' or not applicable now. Type 'help'.");
     }
   }
 
@@ -468,7 +390,7 @@ public class GameClient implements Runnable {
 
   private void handleQuitCommand(ClientState cs) {
     if (currentSessionId != null
-            && (cs == ClientState.IN_GAME
+        && (cs == ClientState.IN_GAME
             || cs == ClientState.IN_LOBBY_AWAITING_START
             || cs == ClientState.HOSTING_LOBBY_WAITING
             || cs.name().contains("EXAM"))) {
@@ -480,24 +402,24 @@ public class GameClient implements Runnable {
 
   private boolean isThisClientTheHost() {
     boolean result =
-            Objects.equals(this.playerId, this.hostPlayerIdInSession) && this.playerId != null;
+        Objects.equals(this.playerId, this.hostPlayerIdInSession) && this.playerId != null;
     log(
-            "isThisClientTheHost() check: myId="
-                    + this.playerId
-                    + ", sessionHostId="
-                    + this.hostPlayerIdInSession
-                    + ", result="
-                    + result);
+        "isThisClientTheHost() check: myId="
+            + this.playerId
+            + ", sessionHostId="
+            + this.hostPlayerIdInSession
+            + ", result="
+            + result);
     return result;
   }
 
   private void handleSetNameCommand(String input) {
     CommandParserClient.ParsedCommandData parsedData =
-            CommandParserClient.parse(input); // input is like "/setname NewName"
+        CommandParserClient.parse(input); // input is like "/setname NewName"
     if (parsedData == null
-            || !parsedData.commandName.equals("/setname")
-            || parsedData.getFirstArgument() == null
-            || parsedData.getFirstArgument().isEmpty()) {
+        || !parsedData.commandName.equals("/setname")
+        || parsedData.getFirstArgument() == null
+        || parsedData.getFirstArgument().isEmpty()) {
       printToConsole("Usage: /setname <new_display_name>");
       return;
     }
@@ -510,13 +432,12 @@ public class GameClient implements Runnable {
 
       if (connected.get()) {
         Command setNameCmd =
-                CommandFactoryClient.createCommand(
-                        parsedData, isThisClientTheHost(), currentState.get());
+            CommandFactoryClient.createCommand(parsedData, isThisClientTheHost(), currentState.get());
         if (setNameCmd != null) {
           sendToServer(setNameCmd);
         } else {
-          logError("Failed to create UpdateDisplayNameCommand for /setname " +
-                  newName, null);
+          logError(
+              "Failed to create UpdateDisplayNameCommand for /setname " + newName, null);
           this.playerDisplayId = oldLocalDisplayName; // Revert optimistic update
           printToConsole("Error sending name change to server.");
         }
@@ -534,7 +455,9 @@ public class GameClient implements Runnable {
       currentState.set(this.preWaitingState);
       this.preWaitingState = null; // Clear it after use
     } else {
-      logError("Cancel called from waiting state " + cs + " but preWaitingState was null. Returning to CONNECTED_IDLE.", null);
+      logError(
+          "Cancel called from waiting state " + cs + " but preWaitingState was null. Returning to CONNECTED_IDLE.",
+          null);
       currentState.set(ClientState.CONNECTED_IDLE);
     }
   }
@@ -581,7 +504,6 @@ public class GameClient implements Runnable {
     }
   }
 
-
   // REPLACE this method
   private void handleHostCaseSelection(String input) {
     if ("0".equals(input)) {
@@ -601,9 +523,12 @@ public class GameClient implements Runnable {
           String langCode = selectedCase.getLocalizations().keySet().iterator().next();
           sendHostRequest(selectedCase.getUniversalTitle(), langCode);
         } else {
-          printToConsole("--- Select a Language for '" + selectedCase.getUniversalTitle() + "' ---");
-          List<String> langNames = selectedCase.getLocalizations().values().stream()
-                  .map(JsonDTO.CaseFile.LocalizedData::getLanguageName).collect(Collectors.toList());
+          printToConsole(
+              "--- Select a Language for '" + selectedCase.getUniversalTitle() + "' ---");
+          List<String> langNames =
+              selectedCase.getLocalizations().values().stream()
+                  .map(JsonDTO.CaseFile.LocalizedData::getLanguageName)
+                  .collect(Collectors.toList());
           for (int i = 0; i < langNames.size(); i++) {
             printToConsole((i + 1) + ". " + langNames.get(i));
           }
@@ -695,12 +620,16 @@ public class GameClient implements Runnable {
     }
 
     if (currentExamQuestionNumberBeingAnswered <= 0) { // Safety check
-      logError("Cannot submit answer, currentExamQuestionNumberBeingAnswered is invalid: " + currentExamQuestionNumberBeingAnswered, null);
+      logError(
+          "Cannot submit answer, currentExamQuestionNumberBeingAnswered is invalid: "
+              + currentExamQuestionNumberBeingAnswered,
+          null);
       printToConsole("Error: Not currently expecting an answer for a specific question.");
       currentState.set(ClientState.IN_GAME); // Revert state
       return;
     }
-    Command submitCmd = new SubmitExamAnswerCommand(currentExamQuestionNumberBeingAnswered, inputAnswer);
+    Command submitCmd =
+        new SubmitExamAnswerCommand(currentExamQuestionNumberBeingAnswered, inputAnswer);
     updateClientStateBeforeSending(submitCmd);
     sendToServer(submitCmd);
   }
@@ -708,17 +637,18 @@ public class GameClient implements Runnable {
   private void processChatCommandOnly(String input) {
     String chatText = input.substring(input.indexOf(" ") + 1).trim();
     if (!chatText.isEmpty()) {
-      ChatMessage chatMsg = new ChatMessage(this.playerDisplayId, chatText, System.currentTimeMillis());
+      ChatMessage chatMsg =
+          new ChatMessage(this.playerDisplayId, chatText, System.currentTimeMillis());
       sendToServer(chatMsg);
     } else {
       printToConsole("Usage: /chat <message> OR /c <message>");
     }
   }
 
-
   private void handleAvailableCases(AvailableCasesDTO ac) {
     if (currentState.get() != ClientState.REQUESTING_CASE_LIST_FOR_HOST) {
-      log("Received case list from server unexpectedly (current state: " + currentState.get() + ").");
+      log(
+          "Received case list from server unexpectedly (current state: " + currentState.get() + ").");
       // Don't change state here, it can cause loops. Let the user's "cancel" command handle it.
       return;
     }
@@ -731,7 +661,8 @@ public class GameClient implements Runnable {
       printToConsole("--- Select a Case to Host ---");
       for (int i = 0; i < availableCasesCache.size(); i++) {
         JsonDTO.CaseFile currentCase = availableCasesCache.get(i);
-        String languages = currentCase.getLocalizations().values().stream()
+        String languages =
+            currentCase.getLocalizations().values().stream()
                 .map(JsonDTO.CaseFile.LocalizedData::getLanguageName)
                 .collect(Collectors.joining(", "));
         printToConsole((i + 1) + ". " + currentCase.getUniversalTitle() + " [" + languages + "]");
@@ -783,13 +714,19 @@ public class GameClient implements Runnable {
     StringBuilder sb = new StringBuilder();
     sb.append("\n--- Location: ").append(rd.getName()).append(" ---\n");
     sb.append(rd.getDescription()).append("\n");
-    sb.append("Objects: ").append(rd.getObjectNames().isEmpty() ? "None" : String.join(", ", rd.getObjectNames())).append("\n");
-    sb.append("Occupants: ").append(rd.getOccupantNames().isEmpty() ? "None" : String.join(", ", rd.getOccupantNames())).append("\n");
+    sb.append("Objects: ")
+        .append(rd.getObjectNames().isEmpty() ? "None" : String.join(", ", rd.getObjectNames()))
+        .append("\n");
+    sb.append("Occupants: ")
+        .append(
+            rd.getOccupantNames().isEmpty() ? "None" : String.join(", ", rd.getOccupantNames()))
+        .append("\n");
     sb.append("Exits: ");
     if (rd.getExits().isEmpty()) {
       sb.append("None");
     } else {
-      rd.getExits().forEach((dir, roomName) -> sb.append(dir).append(" (to ").append(roomName).append("), "));
+      rd.getExits()
+          .forEach((dir, roomName) -> sb.append(dir).append(" (to ").append(roomName).append("), "));
       if (!rd.getExits().isEmpty()) sb.setLength(sb.length() - 2);
     }
     printToConsole(sb.toString());
@@ -801,14 +738,19 @@ public class GameClient implements Runnable {
   private void handleHostGameResponse(HostGameResponseDTO hgr) {
     if (hgr.isSuccess()) {
       this.currentSessionId = hgr.getSessionId();
-      printToConsole("Game hosted successfully! Session ID: " + hgr.getSessionId()
-              + (hgr.getGameCode() != null ? ". Private Code for others: " + hgr.getGameCode() : ". This is a public game."));
+      printToConsole(
+          "Game hosted successfully! Session ID: "
+              + hgr.getSessionId()
+              + (hgr.getGameCode() != null
+                  ? ". Private Code for others: " + hgr.getGameCode()
+                  : ". This is a public game."));
       printToConsole("Waiting for another player to join...");
       currentState.set(ClientState.HOSTING_LOBBY_WAITING);
     } else {
       printToConsole("Failed to host game: " + hgr.getMessage());
       // Revert to the appropriate state
-      if (preWaitingState == ClientState.SELECTING_HOST_CASE || currentState.get() == ClientState.SENDING_HOST_REQUEST) {
+      if (preWaitingState == ClientState.SELECTING_HOST_CASE
+          || currentState.get() == ClientState.SENDING_HOST_REQUEST) {
         currentState.set(ClientState.SELECTING_HOST_CASE);
       } else {
         currentState.set(ClientState.SELECTING_HOST_TYPE);
@@ -832,9 +774,15 @@ public class GameClient implements Runnable {
       printToConsole("--- Available Public Games ---");
       for (int i = 0; i < publicGamesCache.size(); i++) {
         PublicGameInfoDTO gameInfo = publicGamesCache.get(i);
-        printToConsole((i + 1) + ". Hosted by: " + gameInfo.getHostPlayerDisplayId()
-                + " | Case: " + gameInfo.getCaseTitle()
-                + " (ID: " + gameInfo.getSessionId().substring(0, Math.min(8, gameInfo.getSessionId().length())) + "..)");
+        printToConsole(
+            (i + 1)
+                + ". Hosted by: "
+                + gameInfo.getHostPlayerDisplayId()
+                + " | Case: "
+                + gameInfo.getCaseTitle()
+                + " (ID: "
+                + gameInfo.getSessionId().substring(0, Math.min(8, gameInfo.getSessionId().length()))
+                + "..)");
       }
       currentState.set(ClientState.VIEWING_PUBLIC_GAMES);
     }
@@ -843,13 +791,16 @@ public class GameClient implements Runnable {
   private void handleJoinGameResponse(JoinGameResponseDTO jgr) {
     if (jgr.isSuccess()) {
       this.currentSessionId = jgr.getSessionId();
-      printToConsole("Successfully joined game session: " + jgr.getSessionId() + ". " + jgr.getMessage());
+      printToConsole(
+          "Successfully joined game session: " + jgr.getSessionId() + ". " + jgr.getMessage());
       currentState.set(ClientState.IN_LOBBY_AWAITING_START);
     } else {
       printToConsole("Failed to join game: " + jgr.getMessage());
-      if (preWaitingState == ClientState.VIEWING_PUBLIC_GAMES || currentState.get() == ClientState.SENDING_JOIN_PUBLIC_REQUEST) {
+      if (preWaitingState == ClientState.VIEWING_PUBLIC_GAMES
+          || currentState.get() == ClientState.SENDING_JOIN_PUBLIC_REQUEST) {
         currentState.set(ClientState.VIEWING_PUBLIC_GAMES);
-      } else if (preWaitingState == ClientState.ENTERING_PRIVATE_CODE || currentState.get() == ClientState.SENDING_JOIN_PRIVATE_REQUEST) {
+      } else if (preWaitingState == ClientState.ENTERING_PRIVATE_CODE
+          || currentState.get() == ClientState.SENDING_JOIN_PRIVATE_REQUEST) {
         currentState.set(ClientState.ENTERING_PRIVATE_CODE);
       } else {
         currentState.set(ClientState.SELECTING_JOIN_TYPE);
@@ -860,7 +811,8 @@ public class GameClient implements Runnable {
   private void handleLobbyUpdate(LobbyUpdateDTO lu) {
     printToConsole("[LOBBY UPDATE] " + lu.getMessage());
     if (!lu.getPlayerDisplayIdsInLobbyOrGame().isEmpty()) {
-      printToConsole("Players now in session: " + String.join(", ", lu.getPlayerDisplayIdsInLobbyOrGame()));
+      printToConsole(
+          "Players now in session: " + String.join(", ", lu.getPlayerDisplayIdsInLobbyOrGame()));
     }
     if (lu.getHostPlayerId() != null) {
       this.hostPlayerIdInSession = lu.getHostPlayerId();
@@ -868,7 +820,8 @@ public class GameClient implements Runnable {
       if (isThisClientTheHost()) {
         printToConsole("(You are the HOST of this session)");
       } else {
-        printToConsole("(You are a GUEST in this session. Host is: " + this.hostPlayerIdInSession + ")");
+        printToConsole(
+            "(You are a GUEST in this session. Host is: " + this.hostPlayerIdInSession + ")");
       }
     }
 
@@ -878,7 +831,7 @@ public class GameClient implements Runnable {
         currentState.set(ClientState.IN_LOBBY_AWAITING_START);
       }
     } else if (currentState.get() == ClientState.HOSTING_LOBBY_WAITING
-            && lu.getPlayerDisplayIdsInLobbyOrGame().size() >= NetworkConstants.MAX_PLAYERS_PER_GAME) {
+        && lu.getPlayerDisplayIdsInLobbyOrGame().size() >= NetworkConstants.MAX_PLAYERS_PER_GAME) {
       if (isThisClientTheHost()) {
         printToConsole("Your opponent has joined. As host, type 'start case' to begin.");
       } else {
@@ -907,7 +860,8 @@ public class GameClient implements Runnable {
       printToConsole("[SERVER] --- Final Exam Concluded ---");
       if (currentSessionId != null) {
         currentState.set(ClientState.IN_GAME);
-        log("Exam concluded. Client state set to IN_GAME. You can continue investigating or type 'exit'.");
+        log(
+            "Exam concluded. Client state set to IN_GAME. You can continue investigating or type 'exit'.");
         printToConsole("You can now continue investigating or type 'exit' to leave the game.");
       } else {
         currentState.set(ClientState.CONNECTED_IDLE);
@@ -969,7 +923,11 @@ public class GameClient implements Runnable {
       } else if (message instanceof ClientIdAssignmentDTO idDto) {
         this.playerId = idDto.getPlayerId();
         this.playerDisplayId = idDto.getAssignedDisplayId();
-        printToConsole("Server registration complete. Your Player ID: " + this.playerId + ", Display Name: " + this.playerDisplayId);
+        printToConsole(
+            "Server registration complete. Your Player ID: "
+                + this.playerId
+                + ", Display Name: "
+                + this.playerDisplayId);
       } else {
         printToConsole("[UNHANDLED DTO] " + message.getClass().getSimpleName());
       }
@@ -993,7 +951,14 @@ public class GameClient implements Runnable {
     if (nextState != current) {
       if (nextState.isPrimarilyWaiting()) {
         this.preWaitingState = current;
-        log("Transitioning from " + current + " to waiting state " + nextState + " (preWaitingState set to " + this.preWaitingState + ")");
+        log(
+            "Transitioning from "
+                + current
+                + " to waiting state "
+                + nextState
+                + " (preWaitingState set to "
+                + this.preWaitingState
+                + ")");
       } else {
         this.preWaitingState = null;
         log("Transitioning from " + current + " to " + nextState + " (preWaitingState cleared)");
@@ -1029,7 +994,14 @@ public class GameClient implements Runnable {
       return;
     }
     currentState.set(ClientState.CONNECTING);
-    log("Attempting to connect to server at " + host + ":" + port + " (Attempt " + (reconnectAttempts + 1) + ")");
+    log(
+        "Attempting to connect to server at "
+            + host
+            + ":"
+            + port
+            + " (Attempt "
+            + (reconnectAttempts + 1)
+            + ")");
 
     try {
       channel = SocketChannel.open();
@@ -1041,7 +1013,8 @@ public class GameClient implements Runnable {
       log("Successfully connected to the server!");
 
       if (networkListenerThread == null || !networkListenerThread.isAlive()) {
-        networkListenerThread = new Thread(this::listenToServer, "GameClient-NetworkListener");
+        networkListenerThread =
+            new Thread(this::listenToServer, "GameClient-NetworkListener");
         networkListenerThread.setDaemon(true);
         networkListenerThread.start();
       }
@@ -1193,7 +1166,8 @@ public class GameClient implements Runnable {
       printToConsole("\n--- Select a Case to Host ---");
       for (int i = 0; i < availableCasesCache.size(); i++) {
         JsonDTO.CaseFile currentCase = availableCasesCache.get(i);
-        String languages = currentCase.getLocalizations().values().stream()
+        String languages =
+            currentCase.getLocalizations().values().stream()
                 .map(JsonDTO.CaseFile.LocalizedData::getLanguageName)
                 .collect(Collectors.joining(", "));
         printToConsole((i + 1) + ". " + currentCase.getUniversalTitle() + " [" + languages + "]");
@@ -1227,9 +1201,14 @@ public class GameClient implements Runnable {
   private void sendHostRequest(String universalTitle, String languageCode) {
     boolean isActualPublicRequest = this.intentToHostPublic;
     printToConsole(
-            "Creating " + (isActualPublicRequest ? "public" : "private") + " game for '" + universalTitle + "'...");
+        "Creating "
+            + (isActualPublicRequest ? "public" : "private")
+            + " game for '"
+            + universalTitle
+            + "'...");
 
-    HostGameRequestDTO payload = new HostGameRequestDTO(universalTitle, isActualPublicRequest, languageCode);
+    HostGameRequestDTO payload =
+        new HostGameRequestDTO(universalTitle, isActualPublicRequest, languageCode);
     HostGameCommand command = new HostGameCommand(payload);
 
     this.preWaitingState = ClientState.SELECTING_HOST_TYPE;

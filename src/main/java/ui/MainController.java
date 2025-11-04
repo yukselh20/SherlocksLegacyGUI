@@ -199,6 +199,7 @@ public class MainController implements GameClientStateListener {
       switch (currentState) {
         case MENU:
           nextView = mainMenuVBox;
+          terminalTextArea.clear();
           tasksButton.setVisible(false);
           journalButton.setVisible(false);
           chatButton.setVisible(false);

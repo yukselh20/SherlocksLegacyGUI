@@ -73,13 +73,10 @@ public class RoomView extends StackPane {
     roomNameLabel.setText(roomDescription.getName());
 
     // Load room background image
-    String roomImagePath = getRoomImagePath(roomDescription.getName());
-    try {
-      Image roomImage = new Image(getClass().getResourceAsStream(roomImagePath));
+    Image roomImage = ImageResourceLoader.loadRoomImage(roomDescription.getName());
+    if (roomImage != null) {
       roomBackgroundImage.setImage(roomImage);
-    } catch (Exception e) {
-      System.err.println("Could not load room image: " + roomImagePath + ". Using placeholder.");
-      // Create a placeholder if image not found
+    } else {
       createPlaceholderBackground(roomDescription.getName());
     }
 

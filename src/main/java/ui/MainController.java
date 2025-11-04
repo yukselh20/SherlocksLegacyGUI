@@ -74,6 +74,12 @@ public class MainController {
     roomView = new RoomView(this);
     roomPane.getChildren().add(roomView);
 
+    // Redirect System.out to the terminal TextArea
+    TextAreaOutputStream taos = new TextAreaOutputStream(terminalTextArea);
+    GameOutputParser parser = new GameOutputParser(this);
+    taos.setParser(parser);
+    System.setOut(new PrintStream(taos, true));
+
     createMainMenu();
     updateUIVisibility();
   }
@@ -167,11 +173,6 @@ public class MainController {
     int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);
 
     gameClient = new GameClient(host, port);
-    
-    TextAreaOutputStream taos = new TextAreaOutputStream(terminalTextArea);
-    GameOutputParser parser = new GameOutputParser(this);
-    taos.setParser(parser);
-    System.setOut(new PrintStream(taos, true));
 
     gameClientThread = new Thread(() -> {
       try {

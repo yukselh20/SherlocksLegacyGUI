@@ -39,3 +39,7 @@ bin/
 .DS_Store
 /.idea/
 /.settings/
+-e 
+# Environment files
+*.env
+*.env.*

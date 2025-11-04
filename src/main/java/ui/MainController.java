@@ -1,24 +1,38 @@
 package ui;
 
+import java.io.PrintStream;
+import java.util.List;
 import client.GameClient;
+import common.NetworkConstants;
 import common.dto.RoomDescriptionDTO;
+import javafx.application.HostServices;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.stage.Stage;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import server.ServerMain;
+import singleplayer.SinglePlayerMain;
+import ui.util.GameOutputParser;
 import ui.util.RoomView;
 import ui.util.TextAreaOutputStream;
 import ui.windows.ChatWindow;
 import ui.windows.JournalWindow;
 import ui.windows.TasksWindow;
 
-import java.io.PrintStream;
-
-/**
- * Main controller for the Detective Game JavaFX GUI.
- * Manages the BorderPane layout with terminal, room view, and window buttons.
- */
 public class MainController {
+
+  private enum UIState {
+    MENU,
+    GAME_SINGLE,
+    GAME_MULTI
+  }
 
   @FXML private BorderPane mainBorderPane;
   @FXML private Button tasksButton;
@@ -33,86 +47,208 @@ public class MainController {
   @FXML private SplitPane bottomSplitPane;
 
   private GameClient gameClient;
+  private Thread gameClientThread;
   private JournalWindow journalWindow;
   private ChatWindow chatWindow;
   private TasksWindow tasksWindow;
   private RoomView roomView;
   private int unreadChatCount = 0;
 
-  /**
-   * Initialize method called by FXML loader after UI components are loaded.
-   */
+  private VBox mainMenuVBox;
+  private List<String> launchArgs;
+  private HostServices hostServices;
+  private UIState currentState = UIState.MENU;
+
   @FXML
   public void initialize() {
-    // Set terminal to be non-editable
     terminalTextArea.setEditable(false);
     terminalTextArea.setWrapText(true);
-
-    // Set up Enter key handler for terminal input
     terminalInputField.setOnAction(event -> handleTerminalInput());
-
-    // Initialize button handlers
     tasksButton.setOnAction(event -> openTasksWindow());
     journalButton.setOnAction(event -> openJournalWindow());
     chatButton.setOnAction(event -> openChatWindow());
-
-    // Initialize status
-    updateStatus("GUI Ready - Waiting for client connection...");
-
-    // Hide unread chat label initially
+    updateStatus("GUI Ready. Please select a game mode.");
     unreadChatLabel.setVisible(false);
-
-    // Set up split pane divider position (70% terminal, 30% status)
     bottomSplitPane.setDividerPositions(0.7);
 
-    // Initialize RoomView
     roomView = new RoomView(this);
-    roomPane.getChildren().clear();
     roomPane.getChildren().add(roomView);
+
+    createMainMenu();
+    updateUIVisibility();
   }
 
-  /**
-   * Sets the GameClient instance and redirects its console output to the GUI.
-   */
-  public void setGameClient(GameClient client) {
-    this.gameClient = client;
+  public void setLaunchArgs(List<String> args) {
+      this.launchArgs = args;
+  }
 
-    // Redirect System.out to the terminal TextArea
+  public void setHostServices(HostServices hostServices) {
+      this.hostServices = hostServices;
+  }
+
+  private void createMainMenu() {
+    mainMenuVBox = new VBox(15);
+    mainMenuVBox.setAlignment(Pos.CENTER);
+    mainMenuVBox.getStyleClass().add("main-menu-container");
+
+    Button singlePlayerButton = new Button("Single Player");
+    singlePlayerButton.getStyleClass().add("main-menu-button");
+    singlePlayerButton.setOnAction(event -> startSinglePlayer());
+
+    Button multiplayerButton = new Button("Multiplayer (Join/Host)");
+    multiplayerButton.getStyleClass().add("main-menu-button");
+    multiplayerButton.setOnAction(event -> startMultiplayer());
+
+    Button startServerButton = new Button("Start Server Only");
+    startServerButton.getStyleClass().add("main-menu-button");
+    startServerButton.setOnAction(event -> startServer());
+
+    Button quitButton = new Button("Quit");
+    quitButton.getStyleClass().add("main-menu-button");
+    quitButton.setOnAction(event -> shutdown());
+
+    mainMenuVBox
+        .getChildren()
+        .addAll(singlePlayerButton, multiplayerButton, startServerButton, quitButton);
+  }
+
+  private void updateUIVisibility() {
+    Platform.runLater(() -> {
+      switch (currentState) {
+        case MENU:
+          roomPane.getChildren().clear();
+          roomPane.getChildren().add(mainMenuVBox);
+          tasksButton.setVisible(false);
+          journalButton.setVisible(false);
+          chatButton.setVisible(false);
+          rightInfoPanel.setVisible(false);
+          break;
+        case GAME_SINGLE:
+          roomPane.getChildren().clear();
+          roomPane.getChildren().add(roomView);
+          tasksButton.setVisible(true);
+          journalButton.setVisible(true);
+          chatButton.setVisible(false);
+          rightInfoPanel.setVisible(true);
+          break;
+        case GAME_MULTI:
+          roomPane.getChildren().clear();
+          roomPane.getChildren().add(roomView);
+          tasksButton.setVisible(true);
+          journalButton.setVisible(true);
+          chatButton.setVisible(true);
+          rightInfoPanel.setVisible(true);
+          break;
+      }
+    });
+  }
+
+  private void startSinglePlayer() {
+    updateStatus("Starting Single Player...");
+    Thread singlePlayerThread = new Thread(() -> {
+      try {
+        SinglePlayerMain.main(launchArgs.toArray(new String[0]));
+      } catch (Exception e) {
+        e.printStackTrace();
+      } finally {
+        currentState = UIState.MENU;
+        updateUIVisibility();
+      }
+    });
+    singlePlayerThread.setDaemon(true);
+    singlePlayerThread.start();
+    currentState = UIState.GAME_SINGLE;
+    updateUIVisibility();
+  }
+
+  private void startMultiplayer() {
+    updateStatus("Starting Multiplayer Client...");
+    String host = getLaunchArg(0, NetworkConstants.DEFAULT_HOST);
+    int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);
+
+    gameClient = new GameClient(host, port);
+    
     TextAreaOutputStream taos = new TextAreaOutputStream(terminalTextArea);
-    
-    // Set up output parser
-    ui.util.GameOutputParser parser = new ui.util.GameOutputParser(this);
+    GameOutputParser parser = new GameOutputParser(this);
     taos.setParser(parser);
-    
-    PrintStream ps = new PrintStream(taos, true);
-    System.setOut(ps);
+    System.setOut(new PrintStream(taos, true));
 
-    updateStatus("Connected to game client");
+    gameClientThread = new Thread(() -> {
+      try {
+        gameClient.run();
+      } catch (Exception e) {
+        e.printStackTrace();
+      } finally {
+        currentState = UIState.MENU;
+        updateUIVisibility();
+      }
+    }, "GameClient-Thread");
+    gameClientThread.setDaemon(true);
+    gameClientThread.start();
+    currentState = UIState.GAME_MULTI;
+    updateUIVisibility();
   }
 
-  /**
-   * Handles user input from the terminal text field.
-   */
+  private void startServer() {
+      updateStatus("Starting Game Server...");
+      Thread serverThread = new Thread(() -> {
+          try {
+              ServerMain.main(launchArgs.toArray(new String[0]));
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+      });
+      serverThread.setDaemon(true);
+      serverThread.start();
+      terminalTextArea.appendText("Server started in background. You can now start a multiplayer client.\n");
+  }
+
+  private String getLaunchArg(int index, String defaultValue) {
+    if (launchArgs != null && launchArgs.size() > index) {
+      return launchArgs.get(index);
+    }
+    return defaultValue;
+  }
+
+  private int getLaunchArg(int index, int defaultValue) {
+    if (launchArgs != null && launchArgs.size() > index) {
+      try {
+        return Integer.parseInt(launchArgs.get(index));
+      } catch (NumberFormatException e) {
+        // Ignore
+      }
+    }
+    return defaultValue;
+  }
+
+  public void shutdown() {
+      System.out.println("\nShutting down application...");
+      if (gameClient != null) {
+          gameClient.stopClient();
+      }
+      if (gameClientThread != null && gameClientThread.isAlive()) {
+          try {
+              gameClientThread.join(2000);
+          } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+          }
+      }
+      Platform.exit();
+      System.exit(0);
+  }
+
   @FXML
   private void handleTerminalInput() {
     String input = terminalInputField.getText().trim();
     if (!input.isEmpty()) {
-      // Echo the input to the terminal
       terminalTextArea.appendText("> " + input + "\n");
-
-      // Send to GameClient if available
       if (gameClient != null) {
         gameClient.enqueueUserInput(input);
       }
-
-      // Clear input field
       terminalInputField.clear();
     }
   }
 
-  /**
-   * Opens the Tasks window.
-   */
   private void openTasksWindow() {
     if (tasksWindow == null) {
       tasksWindow = new TasksWindow();
@@ -120,9 +256,6 @@ public class MainController {
     tasksWindow.show();
   }
 
-  /**
-   * Opens the Journal window.
-   */
   private void openJournalWindow() {
     if (journalWindow == null) {
       journalWindow = new JournalWindow(this);
@@ -130,31 +263,20 @@ public class MainController {
     journalWindow.show();
   }
 
-  /**
-   * Opens the Chat window and resets unread count.
-   */
   private void openChatWindow() {
     if (chatWindow == null) {
       chatWindow = new ChatWindow(this);
     }
     chatWindow.show();
-
-    // Reset unread count when opening chat
     unreadChatCount = 0;
     updateUnreadChatLabel();
   }
 
-  /**
-   * Increments the unread chat message counter.
-   */
   public void incrementUnreadChat() {
     unreadChatCount++;
     updateUnreadChatLabel();
   }
 
-  /**
-   * Updates the unread chat label visibility and text.
-   */
   private void updateUnreadChatLabel() {
     if (unreadChatCount > 0) {
       unreadChatLabel.setText(String.valueOf(unreadChatCount));
@@ -164,59 +286,37 @@ public class MainController {
     }
   }
 
-  /**
-   * Updates the status label.
-   */
   public void updateStatus(String status) {
     if (statusLabel != null) {
       statusLabel.setText(status);
     }
   }
 
-  /**
-   * Gets the terminal TextArea for external updates.
-   */
   public TextArea getTerminalTextArea() {
     return terminalTextArea;
   }
 
-  /**
-   * Gets the room pane for displaying room visualizations.
-   */
   public StackPane getRoomPane() {
     return roomPane;
   }
 
-  /**
-   * Gets the right info panel for displaying room info.
-   */
   public VBox getRightInfoPanel() {
     return rightInfoPanel;
   }
 
-  /**
-   * Sends a command through the game client.
-   */
   public void sendCommand(String command) {
     if (gameClient != null) {
       gameClient.enqueueUserInput(command);
     }
   }
 
-  /**
-   * Gets the game client instance.
-   */
   public GameClient getGameClient() {
     return gameClient;
   }
 
-  /**
-   * Updates the room view with a new room description.
-   * This should be called when a RoomDescriptionDTO is received from the server.
-   */
   public void updateRoomView(RoomDescriptionDTO roomDescription) {
     if (roomView != null && roomDescription != null) {
-      javafx.application.Platform.runLater(() -> {
+      Platform.runLater(() -> {
         roomView.loadRoom(roomDescription);
         updateRightPanel(roomDescription);
         updateStatus("Current room: " + roomDescription.getName());
@@ -224,44 +324,29 @@ public class MainController {
     }
   }
 
-  /**
-   * Updates the right information panel with room details.
-   */
   private void updateRightPanel(RoomDescriptionDTO roomDescription) {
-    // Update right panel lists
-    // Note: In the FXML, we have ListViews that we need to access programmatically
-    // For now, we'll update this via the room view itself
-    // In a full implementation, we'd get references to those ListViews and update them
+    // This can be expanded later.
   }
 
-  /**
-   * Shows a speech bubble response in the room view.
-   */
   public void showRoomResponse(String targetName, String response) {
     if (roomView != null) {
-      javafx.application.Platform.runLater(() -> {
+      Platform.runLater(() -> {
         roomView.showResponseBubble(targetName, response);
       });
     }
   }
 
-  /**
-   * Adds a journal entry (called when journal updates are received).
-   */
   public void addJournalEntry(String entry) {
     if (journalWindow != null) {
-      javafx.application.Platform.runLater(() -> {
+      Platform.runLater(() -> {
         journalWindow.addEntry(entry);
       });
     }
   }
 
-  /**
-   * Adds a chat message (called when chat messages are received).
-   */
   public void addChatMessage(String sender, String message) {
     if (chatWindow != null) {
-      javafx.application.Platform.runLater(() -> {
+      Platform.runLater(() -> {
         chatWindow.addChatMessage(sender, message);
       });
     }

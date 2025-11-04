@@ -1,0 +1,46 @@
+{
+  "universal_title": "The Stolen Sapphire",
+  "startingRoom": "Ballroom",
+  "rooms": [
+    {
+      "name": "Ballroom",
+      "neighbors": { "east": "Terrace" },
+      "objects": [ { "name": "shattered_glass" } ]
+    },
+    {
+      "name": "Terrace",
+      "neighbors": { "west": "Ballroom" },
+      "objects": [ { "name": "cigar_stub" } ]
+    }
+  ],
+  "localizations": {
+    "en": {
+      "languageName": "English",
+      "title": "The Stolen Sapphire",
+      "invitation": "Mr. Holmes, the 'Star of Midnight' sapphire has been stolen from the Countess of Morcar during her annual ball. I implore you to attend at once. The culprit is still among the guests!",
+      "description": "A grand ballroom is in disarray. Guests whisper in hushed tones while police secure the area. The famous 'Star of Midnight' sapphire is gone.",
+      "suspects": [
+        { "name": "LordAshworth", "statement": "I was speaking with the ambassador all evening. A terrible affair!", "clue": "His tie pin is identical to one found near the display case." },
+        { "name": "MademoiselleDupont", "statement": "I never left the dance floor. The sapphire was exquisite, non?", "clue": "A single, long red hair was found on the velvet pedestal." }
+      ],
+      "roomDetails": [
+        { "name": "Ballroom", "description": "The grand ballroom is a scene of chaos. A display case in the center of the room is shattered." },
+        { "name": "Terrace", "description": "The cold night air bites at you on the stone terrace. An ornate railing overlooks the gardens." }
+      ],
+      "objectDetails": [
+        { "name": "shattered_glass", "description": "Shards of thick glass litter the floor around a velvet pedestal.", "examine": "The glass was broken from the inside, as if by a sudden pressure.", "deduce": "The thief didn't break the glass from the outside; they must have had a key." },
+        { "name": "cigar_stub", "description": "A half-smoked cigar lies extinguished on the stone floor.", "examine": "It's a rare brand, imported from Cuba. Only a connoisseur would smoke this.", "deduce": "Lord Ashworth is known for his love of expensive Cuban cigars." }
+      ],
+      "finalExam": [
+        { "question": "What was the brand of the cigar?", "answer": "Cuban" },
+        { "question": "Who is the most likely suspect?", "answer": "LordAshworth" }
+      ],
+      "tasks": [ "Find the thief.", "Recover the sapphire." ],
+      "watsonHints": [ "Consider how the glass was broken.", "Who had the means and opportunity?" ],
+      "rankingTiers": [
+        { "rankName": "Master Detective", "description": "Flawless execution!" },
+        { "rankName": "Investigator", "description": "The case is solved.", "defaultRank": true }
+      ]
+    }
+  }
+}

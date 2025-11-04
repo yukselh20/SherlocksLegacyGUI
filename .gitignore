@@ -11,7 +11,6 @@ target/
 # Ignore compiled Java classes
 *.class
 lib/
-cases/
 bin/
 
 ### Eclipse ###

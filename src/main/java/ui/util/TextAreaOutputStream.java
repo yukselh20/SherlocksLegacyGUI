@@ -13,9 +13,17 @@ import java.nio.charset.StandardCharsets;
 public class TextAreaOutputStream extends OutputStream {
   private final TextArea textArea;
   private final StringBuilder buffer = new StringBuilder();
+  private GameOutputParser parser;
 
   public TextAreaOutputStream(TextArea textArea) {
     this.textArea = textArea;
+  }
+
+  /**
+   * Sets the output parser for parsing game messages.
+   */
+  public void setParser(GameOutputParser parser) {
+    this.parser = parser;
   }
 
   @Override

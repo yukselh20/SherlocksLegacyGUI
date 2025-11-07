@@ -24,6 +24,7 @@ public class GameOutputParser {
   private static final Pattern JOURNAL_PATTERN = Pattern.compile("\\[JOURNAL UPDATE\\] (.+)");
   private static final Pattern RESPONSE_PATTERN = Pattern.compile("(.+) says: (.+)");
   private static final Pattern RETURN_TO_MENU_PATTERN = Pattern.compile("Returning to case selection\\.");
+  private static final Pattern EXIT_APP_PATTERN = Pattern.compile("Exiting application\\.");
 
   public GameOutputParser(MainController controller) {
     this.mainController = controller;
@@ -77,6 +78,13 @@ public class GameOutputParser {
     if (returnMatcher.find()) {
       mainController.showCaseSelectionMenu();
       return;
+    }
+
+    // Check for application exit
+    Matcher exitMatcher = EXIT_APP_PATTERN.matcher(line);
+    if (exitMatcher.find()) {
+        mainController.shutdown();
+        return;
     }
   }
 

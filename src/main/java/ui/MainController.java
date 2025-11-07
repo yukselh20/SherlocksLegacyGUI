@@ -42,6 +42,8 @@ public class MainController implements GameClientStateListener {
 
     private enum UIState {
         MENU,
+        CHOOSING_CASE,
+        CHOOSING_LANGUAGE,
         GAME_SINGLE,
         GAME_MULTI
     }
@@ -85,6 +87,7 @@ public class MainController implements GameClientStateListener {
     private TextAreaOutputStream taos;
     private SinglePlayerMain singlePlayerGame;
     private Thread singlePlayerGameThread;
+    private JsonDTO.CaseFile selectedCaseFile; // Temporarily store the case for language selection
 
     @FXML
     public void initialize() {
@@ -272,6 +275,7 @@ public class MainController implements GameClientStateListener {
 
     private void startSinglePlayer() {
         updateStatus("Starting Single Player...");
+        currentState = UIState.CHOOSING_CASE;
         singlePlayerGame = new SinglePlayerMain();
         showSinglePlayerCaseSelection();
     }
@@ -291,6 +295,7 @@ public class MainController implements GameClientStateListener {
             caseSelectionBox.getChildren().add(caseButton);
         }
         terminalTextArea.appendText("---------------------\n");
+        terminalTextArea.appendText("Type 'back' to return to the Main Menu.\n");
 
         Button backButton = new Button("Back to Main Menu");
         backButton.setOnAction(event -> {
@@ -302,7 +307,29 @@ public class MainController implements GameClientStateListener {
         roomPane.getChildren().add(caseSelectionBox);
     }
 
+    private void handleCaseSelectionInput(String input) {
+        try {
+            int choice = Integer.parseInt(input);
+            List<JsonDTO.CaseFile> cases = singlePlayerGame.getAvailableCases();
+            if (choice > 0 && choice <= cases.size()) {
+                showSinglePlayerLanguageSelection(cases.get(choice - 1));
+            } else {
+                terminalTextArea.appendText("Invalid selection. Please choose a valid case number.\n");
+            }
+        } catch (NumberFormatException e) {
+            // Handle "back" or other non-numeric commands if needed
+            if (input.equalsIgnoreCase("back")) {
+                currentState = UIState.MENU;
+                updateUIVisibility();
+            } else {
+                terminalTextArea.appendText("Invalid command. Please enter a number.\n");
+            }
+        }
+    }
+
     private void showSinglePlayerLanguageSelection(JsonDTO.CaseFile caseFile) {
+        this.selectedCaseFile = caseFile; // Store the selected case
+        currentState = UIState.CHOOSING_LANGUAGE;
         VBox langSelectionBox = new VBox(15);
         langSelectionBox.setAlignment(Pos.CENTER);
         List<String> langCodes = new java.util.ArrayList<>(caseFile.getLocalizations().keySet());
@@ -323,11 +350,37 @@ public class MainController implements GameClientStateListener {
             });
             langSelectionBox.getChildren().add(langButton);
         }
+        terminalTextArea.appendText("-------------------------------------\n");
+        terminalTextArea.appendText("Type 'back' to return to Case Selection.\n");
         Button backButton = new Button("Back to Case Selection");
         backButton.setOnAction(event -> showSinglePlayerCaseSelection());
         langSelectionBox.getChildren().add(backButton);
         roomPane.getChildren().clear();
         roomPane.getChildren().add(langSelectionBox);
+    }
+
+    private void handleLanguageSelectionInput(String input) {
+        try {
+            int choice = Integer.parseInt(input);
+            List<String> langCodes = new java.util.ArrayList<>(selectedCaseFile.getLocalizations().keySet());
+            java.util.Collections.sort(langCodes);
+
+            if (choice > 0 && choice <= langCodes.size()) {
+                String langCode = langCodes.get(choice - 1);
+                JsonDTO.LocalizedCaseFile localizedCase = singlePlayerGame.selectCaseAndLanguage(selectedCaseFile, langCode);
+                singlePlayerGame.initializeCase(localizedCase);
+                currentState = UIState.GAME_SINGLE;
+                updateUIVisibility();
+            } else {
+                terminalTextArea.appendText("Invalid selection. Please choose a valid language number.\n");
+            }
+        } catch (NumberFormatException e) {
+            if (input.equalsIgnoreCase("back")) {
+                showSinglePlayerCaseSelection();
+            } else {
+                terminalTextArea.appendText("Invalid command. Please enter a number.\n");
+            }
+        }
     }
 
     private void startMultiplayer() {
@@ -412,6 +465,10 @@ public class MainController implements GameClientStateListener {
                 gameClient.enqueueUserInput(input);
             } else if (currentState == UIState.MENU) {
                 handleMainMenuInput(input);
+            } else if (currentState == UIState.CHOOSING_CASE) {
+                handleCaseSelectionInput(input);
+            } else if (currentState == UIState.CHOOSING_LANGUAGE) {
+                handleLanguageSelectionInput(input);
             }
             terminalInputField.clear();
         }

@@ -551,15 +551,11 @@ private void evaluateAndSendExamResults(String playerId) {
 
   @Override
   public void handlePlayerExitRequest(String playerId) {
-    if (isCaseStarted() || isExamActive) {
-      sendResponseToPlayer(playerId, new TextMessage("Exiting current case. Returning to case selection.", false));
-      resetExamState();
-      this.caseStarted = false;
-      this.wantsToExitToCaseSelection = true;
-    } else {
-      sendResponseToPlayer(playerId, new TextMessage("Exiting application.", false));
-      this.wantsToExitApplication = true;
-    }
+    // In single-player, "exit" should always go back to the case selection, never exit the app.
+    sendResponseToPlayer(playerId, new TextMessage("Exiting current case. Returning to case selection.", false));
+    resetExamState();
+    this.caseStarted = false;
+    this.wantsToExitToCaseSelection = true;
   }
 
   @Override

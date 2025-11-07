@@ -307,6 +307,13 @@ public class MainController implements GameClientStateListener {
         roomPane.getChildren().add(caseSelectionBox);
     }
 
+    public void showCaseSelectionMenu() {
+        Platform.runLater(() -> {
+            currentState = UIState.CHOOSING_CASE;
+            showSinglePlayerCaseSelection();
+        });
+    }
+
     private void handleCaseSelectionInput(String input) {
         try {
             int choice = Integer.parseInt(input);

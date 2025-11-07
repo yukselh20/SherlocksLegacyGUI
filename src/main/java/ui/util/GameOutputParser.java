@@ -23,6 +23,7 @@ public class GameOutputParser {
   private static final Pattern CHAT_PATTERN = Pattern.compile("\\[CHAT\\] (.+?): (.+)");
   private static final Pattern JOURNAL_PATTERN = Pattern.compile("\\[JOURNAL UPDATE\\] (.+)");
   private static final Pattern RESPONSE_PATTERN = Pattern.compile("(.+) says: (.+)");
+  private static final Pattern RETURN_TO_MENU_PATTERN = Pattern.compile("Returning to case selection\\.");
 
   public GameOutputParser(MainController controller) {
     this.mainController = controller;
@@ -68,6 +69,13 @@ public class GameOutputParser {
       String npcName = responseMatcher.group(1);
       String response = responseMatcher.group(2);
       mainController.showRoomResponse(npcName, response);
+      return;
+    }
+
+    // Check for return to menu
+    Matcher returnMatcher = RETURN_TO_MENU_PATTERN.matcher(line);
+    if (returnMatcher.find()) {
+      mainController.showCaseSelectionMenu();
       return;
     }
   }

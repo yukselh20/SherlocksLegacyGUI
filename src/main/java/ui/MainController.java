@@ -119,7 +119,6 @@ public class MainController implements GameClientStateListener {
         createMainMenu();
         setupButtonIcons();
         updateUIVisibility();
-        terminalTextArea.appendText("Welcome to Detective Game! Please select a mode to begin.\n");
     }
 
     public void setLaunchArgs(List<String> args) {
@@ -195,12 +194,6 @@ public class MainController implements GameClientStateListener {
         mainMenuVBox
                 .getChildren()
                 .addAll(singlePlayerButton, multiplayerButton, startServerButton, quitButton);
-
-        terminalTextArea.appendText("\n--- Main Menu ---\n");
-        terminalTextArea.appendText("1. Single Player\n");
-        terminalTextArea.appendText("2. Multiplayer (Join/Host)\n");
-        terminalTextArea.appendText("3. Start Server Only\n");
-        terminalTextArea.appendText("4. Quit\n");
     }
 
     private void updateUIVisibility() {
@@ -212,6 +205,12 @@ public class MainController implements GameClientStateListener {
                 case MENU:
                     nextView = mainMenuVBox;
                     terminalTextArea.clear();
+                    terminalTextArea.appendText("Welcome to Detective Game! Please select a mode to begin.\n");
+                    terminalTextArea.appendText("\n--- Main Menu ---\n");
+                    terminalTextArea.appendText("1. Single Player\n");
+                    terminalTextArea.appendText("2. Multiplayer (Join/Host)\n");
+                    terminalTextArea.appendText("3. Start Server Only\n");
+                    terminalTextArea.appendText("4. Quit\n");
                     tasksButton.setVisible(false);
                     journalButton.setVisible(false);
                     chatButton.setVisible(false);

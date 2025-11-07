@@ -280,11 +280,18 @@ public class MainController implements GameClientStateListener {
         List<JsonDTO.CaseFile> cases = singlePlayerGame.getAvailableCases();
         VBox caseSelectionBox = new VBox(15);
         caseSelectionBox.setAlignment(Pos.CENTER);
-        for (JsonDTO.CaseFile caseFile : cases) {
+
+        terminalTextArea.clear();
+        terminalTextArea.appendText("--- Select a Case ---\n");
+        for (int i = 0; i < cases.size(); i++) {
+            JsonDTO.CaseFile caseFile = cases.get(i);
+            terminalTextArea.appendText((i + 1) + ". " + caseFile.getUniversalTitle() + "\n");
             Button caseButton = new Button(caseFile.getUniversalTitle());
             caseButton.setOnAction(event -> showSinglePlayerLanguageSelection(caseFile));
             caseSelectionBox.getChildren().add(caseButton);
         }
+        terminalTextArea.appendText("---------------------\n");
+
         Button backButton = new Button("Back to Main Menu");
         backButton.setOnAction(event -> {
             currentState = UIState.MENU;
@@ -300,8 +307,14 @@ public class MainController implements GameClientStateListener {
         langSelectionBox.setAlignment(Pos.CENTER);
         List<String> langCodes = new java.util.ArrayList<>(caseFile.getLocalizations().keySet());
         java.util.Collections.sort(langCodes);
-        for (String langCode : langCodes) {
-            Button langButton = new Button(caseFile.getLocalizations().get(langCode).getLanguageName());
+
+        terminalTextArea.clear();
+        terminalTextArea.appendText("--- Select a Language for " + caseFile.getUniversalTitle() + " ---\n");
+        for (int i = 0; i < langCodes.size(); i++) {
+            String langCode = langCodes.get(i);
+            String langName = caseFile.getLocalizations().get(langCode).getLanguageName();
+            terminalTextArea.appendText((i + 1) + ". " + langName + "\n");
+            Button langButton = new Button(langName);
             langButton.setOnAction(event -> {
                 JsonDTO.LocalizedCaseFile localizedCase = singlePlayerGame.selectCaseAndLanguage(caseFile, langCode);
                 singlePlayerGame.initializeCase(localizedCase);
@@ -543,6 +556,11 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onMainMenu() {
         Platform.runLater(() -> {
+            terminalTextArea.clear();
+            terminalTextArea.appendText("--- Multiplayer Menu ---\n");
+            terminalTextArea.appendText("1. Host Game\n");
+            terminalTextArea.appendText("2. Join Game\n");
+            terminalTextArea.appendText("----------------------\n");
             VBox menuBox = new VBox(15);
             menuBox.setAlignment(Pos.CENTER);
             Button hostButton = new Button("Host Game");
@@ -564,6 +582,12 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onHostGameOptions() {
         Platform.runLater(() -> {
+            terminalTextArea.clear();
+            terminalTextArea.appendText("--- Host Game Options ---\n");
+            terminalTextArea.appendText("1. Host Public Game\n");
+            terminalTextArea.appendText("2. Host Private Game\n");
+            terminalTextArea.appendText("3. Back\n");
+            terminalTextArea.appendText("-------------------------\n");
             VBox hostOptionsBox = new VBox(15);
             hostOptionsBox.setAlignment(Pos.CENTER);
             Button publicButton = new Button("Host Public Game");
@@ -581,14 +605,20 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onCaseSelection(List<JsonDTO.CaseFile> cases) {
         Platform.runLater(() -> {
+            terminalTextArea.clear();
+            terminalTextArea.appendText("--- Select a Case ---\n");
             VBox caseSelectionBox = new VBox(15);
             caseSelectionBox.setAlignment(Pos.CENTER);
             for (int i = 0; i < cases.size(); i++) {
                 final int caseNum = i + 1;
-                Button caseButton = new Button(cases.get(i).getUniversalTitle());
+                String caseTitle = cases.get(i).getUniversalTitle();
+                terminalTextArea.appendText(caseNum + ". " + caseTitle + "\n");
+                Button caseButton = new Button(caseTitle);
                 caseButton.setOnAction(event -> sendCommand(String.valueOf(caseNum)));
                 caseSelectionBox.getChildren().add(caseButton);
             }
+            terminalTextArea.appendText("0. Back\n");
+            terminalTextArea.appendText("---------------------\n");
             Button backButton = new Button("Back");
             backButton.setOnAction(event -> sendCommand("0"));
             caseSelectionBox.getChildren().add(backButton);
@@ -600,6 +630,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onLanguageSelection(JsonDTO.CaseFile caseFile) {
         Platform.runLater(() -> {
+            terminalTextArea.clear();
+            terminalTextArea.appendText("--- Select a Language for " + caseFile.getUniversalTitle() + " ---\n");
             VBox langSelectionBox = new VBox(15);
             langSelectionBox.setAlignment(Pos.CENTER);
             List<String> langCodes = new java.util.ArrayList<>(caseFile.getLocalizations().keySet());
@@ -607,10 +639,14 @@ public class MainController implements GameClientStateListener {
             for (int i = 0; i < langCodes.size(); i++) {
                 final int langNum = i + 1;
                 String langCode = langCodes.get(i);
-                Button langButton = new Button(caseFile.getLocalizations().get(langCode).getLanguageName());
+                String langName = caseFile.getLocalizations().get(langCode).getLanguageName();
+                terminalTextArea.appendText(langNum + ". " + langName + "\n");
+                Button langButton = new Button(langName);
                 langButton.setOnAction(event -> sendCommand(String.valueOf(langNum)));
                 langSelectionBox.getChildren().add(langButton);
             }
+            terminalTextArea.appendText("0. Back\n");
+            terminalTextArea.appendText("-------------------------------------\n");
             Button backButton = new Button("Back");
             backButton.setOnAction(event -> sendCommand("0"));
             langSelectionBox.getChildren().add(backButton);
@@ -640,6 +676,12 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onJoinGameOptions() {
         Platform.runLater(() -> {
+            terminalTextArea.clear();
+            terminalTextArea.appendText("--- Join Game Options ---\n");
+            terminalTextArea.appendText("1. Join Public Game\n");
+            terminalTextArea.appendText("2. Join Private Game\n");
+            terminalTextArea.appendText("3. Back\n");
+            terminalTextArea.appendText("-----------------------\n");
             VBox joinOptionsBox = new VBox(15);
             joinOptionsBox.setAlignment(Pos.CENTER);
             Button publicButton = new Button("Join Public Game");
@@ -657,15 +699,21 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onPublicGamesList(List<PublicGameInfoDTO> games) {
         Platform.runLater(() -> {
+            terminalTextArea.clear();
+            terminalTextArea.appendText("--- Public Games ---\n");
             VBox gamesBox = new VBox(15);
             gamesBox.setAlignment(Pos.CENTER);
             for (int i = 0; i < games.size(); i++) {
                 final int gameNum = i + 1;
                 PublicGameInfoDTO game = games.get(i);
-                Button gameButton = new Button(game.getCaseTitle() + " hosted by " + game.getHostPlayerDisplayId());
+                String gameInfo = game.getCaseTitle() + " hosted by " + game.getHostPlayerDisplayId();
+                terminalTextArea.appendText(gameNum + ". " + gameInfo + "\n");
+                Button gameButton = new Button(gameInfo);
                 gameButton.setOnAction(event -> sendCommand(String.valueOf(gameNum)));
                 gamesBox.getChildren().add(gameButton);
             }
+            terminalTextArea.appendText("0. Back\n");
+            terminalTextArea.appendText("--------------------\n");
             Button backButton = new Button("Back");
             backButton.setOnAction(event -> sendCommand("0"));
             gamesBox.getChildren().add(backButton);

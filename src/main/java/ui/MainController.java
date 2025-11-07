@@ -48,6 +48,22 @@ public class MainController implements GameClientStateListener {
         GAME_MULTI
     }
 
+    private enum UIMultiplayerSubState {
+        NONE,
+        CONNECTING,
+        MAIN_MENU,
+        HOST_OPTIONS,
+        CASE_SELECTION,
+        LANGUAGE_SELECTION,
+        HOSTING_LOBBY,
+        JOIN_OPTIONS,
+        PUBLIC_GAMES_LIST,
+        PRIVATE_GAME_ENTRY,
+        IN_LOBBY,
+        IN_GAME,
+        DISCONNECTED
+    }
+
     @FXML
     private BorderPane mainBorderPane;
     @FXML
@@ -88,6 +104,7 @@ public class MainController implements GameClientStateListener {
     private SinglePlayerMain singlePlayerGame;
     private Thread singlePlayerGameThread;
     private JsonDTO.CaseFile selectedCaseFile; // Temporarily store the case for language selection
+    private UIMultiplayerSubState currentMultiplayerSubState = UIMultiplayerSubState.NONE;
 
     @FXML
     public void initialize() {
@@ -469,7 +486,11 @@ public class MainController implements GameClientStateListener {
             if (currentState == UIState.GAME_SINGLE) {
                 singlePlayerGame.processCommand(input);
             } else if (currentState == UIState.GAME_MULTI && gameClient != null) {
-                gameClient.enqueueUserInput(input);
+                if (currentMultiplayerSubState == UIMultiplayerSubState.MAIN_MENU && input.equals("3")) {
+                    gameClient.stopClient(); // This will trigger the thread's finally block to go to the main menu
+                } else {
+                    gameClient.enqueueUserInput(input);
+                }
             } else if (currentState == UIState.MENU) {
                 handleMainMenuInput(input);
             } else if (currentState == UIState.CHOOSING_CASE) {
@@ -588,6 +609,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onDisconnected() {
+        currentMultiplayerSubState = UIMultiplayerSubState.DISCONNECTED;
         Platform.runLater(() -> {
             VBox disconnectedBox = new VBox(15);
             disconnectedBox.setAlignment(Pos.CENTER);
@@ -602,6 +624,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onConnecting() {
+        currentMultiplayerSubState = UIMultiplayerSubState.CONNECTING;
         Platform.runLater(() -> {
             VBox connectingBox = new VBox(15);
             connectingBox.setAlignment(Pos.CENTER);
@@ -619,11 +642,13 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onMainMenu() {
+        currentMultiplayerSubState = UIMultiplayerSubState.MAIN_MENU;
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Multiplayer Menu ---\n");
             terminalTextArea.appendText("1. Host Game\n");
             terminalTextArea.appendText("2. Join Game\n");
+            terminalTextArea.appendText("3. Back to Main Menu\n");
             terminalTextArea.appendText("----------------------\n");
             VBox menuBox = new VBox(15);
             menuBox.setAlignment(Pos.CENTER);
@@ -645,6 +670,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onHostGameOptions() {
+        currentMultiplayerSubState = UIMultiplayerSubState.HOST_OPTIONS;
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Host Game Options ---\n");
@@ -668,6 +694,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onCaseSelection(List<JsonDTO.CaseFile> cases) {
+        currentMultiplayerSubState = UIMultiplayerSubState.CASE_SELECTION;
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Select a Case ---\n");
@@ -693,6 +720,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onLanguageSelection(JsonDTO.CaseFile caseFile) {
+        currentMultiplayerSubState = UIMultiplayerSubState.LANGUAGE_SELECTION;
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Select a Language for " + caseFile.getUniversalTitle() + " ---\n");
@@ -721,6 +749,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onHostingLobby(String gameCode) {
+        currentMultiplayerSubState = UIMultiplayerSubState.HOSTING_LOBBY;
         Platform.runLater(() -> {
             VBox lobbyBox = new VBox(15);
             lobbyBox.setAlignment(Pos.CENTER);
@@ -739,6 +768,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onJoinGameOptions() {
+        currentMultiplayerSubState = UIMultiplayerSubState.JOIN_OPTIONS;
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Join Game Options ---\n");
@@ -762,6 +792,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onPublicGamesList(List<PublicGameInfoDTO> games) {
+        currentMultiplayerSubState = UIMultiplayerSubState.PUBLIC_GAMES_LIST;
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Public Games ---\n");
@@ -788,6 +819,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onPrivateGameEntry() {
+        currentMultiplayerSubState = UIMultiplayerSubState.PRIVATE_GAME_ENTRY;
         Platform.runLater(() -> {
             VBox privateGameBox = new VBox(15);
             privateGameBox.setAlignment(Pos.CENTER);
@@ -804,6 +836,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onLobby() {
+        currentMultiplayerSubState = UIMultiplayerSubState.IN_LOBBY;
         Platform.runLater(() -> {
             VBox lobbyBox = new VBox(15);
             lobbyBox.setAlignment(Pos.CENTER);
@@ -818,6 +851,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onInGame() {
+        currentMultiplayerSubState = UIMultiplayerSubState.IN_GAME;
         currentState = UIState.GAME_MULTI;
         updateUIVisibility();
     }

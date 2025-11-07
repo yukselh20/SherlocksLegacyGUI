@@ -487,7 +487,10 @@ public class MainController implements GameClientStateListener {
                 singlePlayerGame.processCommand(input);
             } else if (currentState == UIState.GAME_MULTI && gameClient != null) {
                 if (currentMultiplayerSubState == UIMultiplayerSubState.MAIN_MENU && input.equals("3")) {
-                    gameClient.stopClient(); // This will trigger the thread's finally block to go to the main menu
+                    gameClient.stopClient();
+                    if (gameClientThread != null) {
+                        gameClientThread.interrupt(); // Interrupt the thread to unblock it
+                    }
                 } else {
                     gameClient.enqueueUserInput(input);
                 }
@@ -659,8 +662,9 @@ public class MainController implements GameClientStateListener {
             Button backButton = new Button("Back to Main Menu");
             backButton.setOnAction(event -> {
                 gameClient.stopClient();
-                currentState = UIState.MENU;
-                updateUIVisibility();
+                if (gameClientThread != null) {
+                    gameClientThread.interrupt();
+                }
             });
             menuBox.getChildren().addAll(hostButton, joinButton, backButton);
             roomPane.getChildren().clear();

@@ -167,33 +167,53 @@ public class MainController implements GameClientStateListener {
         singlePlayerButton.getStyleClass().add("main-menu-button");
         singlePlayerButton.setOnAction(event -> {
             playSound("click.wav");
-            startSinglePlayer();
+            handleMainMenuInput("1");
         });
 
         Button multiplayerButton = new Button("Multiplayer (Join/Host)");
         multiplayerButton.getStyleClass().add("main-menu-button");
         multiplayerButton.setOnAction(event -> {
             playSound("click.wav");
-            startMultiplayer();
+            handleMainMenuInput("2");
         });
 
         Button startServerButton = new Button("Start Server Only");
         startServerButton.getStyleClass().add("main-menu-button");
         startServerButton.setOnAction(event -> {
             playSound("click.wav");
-            startServer();
+            handleMainMenuInput("3");
         });
 
         Button quitButton = new Button("Quit");
         quitButton.getStyleClass().add("main-menu-button");
         quitButton.setOnAction(event -> {
             playSound("click.wav");
-            shutdown();
+            handleMainMenuInput("4");
         });
 
         mainMenuVBox
                 .getChildren()
                 .addAll(singlePlayerButton, multiplayerButton, startServerButton, quitButton);
+    }
+
+    private void handleMainMenuInput(String input) {
+        switch (input) {
+            case "1":
+                startSinglePlayer();
+                break;
+            case "2":
+                startMultiplayer();
+                break;
+            case "3":
+                startServer();
+                break;
+            case "4":
+                shutdown();
+                break;
+            default:
+                terminalTextArea.appendText("Invalid selection. Please enter a number from 1 to 4.\n");
+                break;
+        }
     }
 
     private void updateUIVisibility() {
@@ -377,8 +397,9 @@ public class MainController implements GameClientStateListener {
                 singlePlayerGame.processCommand(input);
             } else if (currentState == UIState.GAME_MULTI && gameClient != null) {
                 gameClient.enqueueUserInput(input);
+            } else if (currentState == UIState.MENU) {
+                handleMainMenuInput(input);
             }
-            // In MENU state, input does nothing.
             terminalInputField.clear();
         }
     }

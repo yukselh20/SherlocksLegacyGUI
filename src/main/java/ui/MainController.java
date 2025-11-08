@@ -376,7 +376,10 @@ public class MainController implements GameClientStateListener {
         terminalTextArea.appendText("0. Back\n");
         terminalTextArea.appendText("-------------------------------------\n");
         Button backButton = new Button("Back to Case Selection");
-        backButton.setOnAction(event -> showSinglePlayerCaseSelection());
+        backButton.setOnAction(event -> {
+            currentState = UIState.CHOOSING_CASE;
+            showSinglePlayerCaseSelection();
+        });
         langSelectionBox.getChildren().add(backButton);
         roomPane.getChildren().clear();
         roomPane.getChildren().add(langSelectionBox);
@@ -384,6 +387,7 @@ public class MainController implements GameClientStateListener {
 
     private void handleLanguageSelectionInput(String input) {
         if (input.equals("0") || input.equalsIgnoreCase("back")) {
+            currentState = UIState.CHOOSING_CASE;
             showSinglePlayerCaseSelection();
             return;
         }

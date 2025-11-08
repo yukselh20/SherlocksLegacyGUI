@@ -311,8 +311,8 @@ public class MainController implements GameClientStateListener {
             caseButton.setOnAction(event -> showSinglePlayerLanguageSelection(caseFile));
             caseSelectionBox.getChildren().add(caseButton);
         }
+        terminalTextArea.appendText("0. Back\n");
         terminalTextArea.appendText("---------------------\n");
-        terminalTextArea.appendText("Type 'back' to return to the Main Menu.\n");
 
         Button backButton = new Button("Back to Main Menu");
         backButton.setOnAction(event -> {
@@ -332,6 +332,11 @@ public class MainController implements GameClientStateListener {
     }
 
     private void handleCaseSelectionInput(String input) {
+        if (input.equals("0") || input.equalsIgnoreCase("back")) {
+            currentState = UIState.MENU;
+            updateUIVisibility();
+            return;
+        }
         try {
             int choice = Integer.parseInt(input);
             List<JsonDTO.CaseFile> cases = singlePlayerGame.getAvailableCases();
@@ -341,13 +346,7 @@ public class MainController implements GameClientStateListener {
                 terminalTextArea.appendText("Invalid selection. Please choose a valid case number.\n");
             }
         } catch (NumberFormatException e) {
-            // Handle "back" or other non-numeric commands if needed
-            if (input.equalsIgnoreCase("back")) {
-                currentState = UIState.MENU;
-                updateUIVisibility();
-            } else {
-                terminalTextArea.appendText("Invalid command. Please enter a number.\n");
-            }
+            terminalTextArea.appendText("Invalid command. Please enter a number or '0' to go back.\n");
         }
     }
 
@@ -712,10 +711,10 @@ public class MainController implements GameClientStateListener {
                 caseButton.setOnAction(event -> sendCommand(String.valueOf(caseNum)));
                 caseSelectionBox.getChildren().add(caseButton);
             }
-            terminalTextArea.appendText("3. Back\n");
+            terminalTextArea.appendText("0. Back\n");
             terminalTextArea.appendText("---------------------\n");
             Button backButton = new Button("Back");
-            backButton.setOnAction(event -> sendCommand("3"));
+            backButton.setOnAction(event -> sendCommand("0"));
             caseSelectionBox.getChildren().add(backButton);
             roomPane.getChildren().clear();
             roomPane.getChildren().add(caseSelectionBox);

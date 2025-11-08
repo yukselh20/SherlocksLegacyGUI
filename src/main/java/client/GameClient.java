@@ -510,7 +510,7 @@ public class GameClient implements Runnable {
 
   // REPLACE this method
   private void handleHostCaseSelection(String input) {
-    if ("3".equals(input)) {
+    if ("0".equals(input)) {
       currentState.set(ClientState.SELECTING_HOST_TYPE);
       this.availableCasesCache = null;
       this.caseIndexForLanguageSelection = -1;

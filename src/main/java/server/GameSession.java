@@ -232,7 +232,6 @@ public class GameSession {
         if (command instanceof common.commands.StartCaseCommand
                 || command instanceof common.commands.RequestStartCaseCommand
                 || command instanceof common.commands.ExitCommand
-                || command instanceof common.commands.HelpCommand
                 || command instanceof common.commands.CancelLobbyCommand) { // Our new command is now included
           commandAllowed = true;
         }

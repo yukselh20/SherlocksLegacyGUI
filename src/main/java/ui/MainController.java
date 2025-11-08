@@ -83,12 +83,6 @@ public class MainController implements GameClientStateListener {
     @FXML
     private StackPane roomPane;
     @FXML
-    private StackPane caseInvitationPane;
-    @FXML
-    private TextArea caseInvitationTextArea;
-    @FXML
-    private Button startCaseButton;
-    @FXML
     private VBox rightInfoPanel;
     @FXML
     private TextArea terminalTextArea;
@@ -118,6 +112,7 @@ public class MainController implements GameClientStateListener {
     private Thread singlePlayerGameThread;
     private JsonDTO.CaseFile selectedCaseFile; // Temporarily store the case for language selection
     private UIMultiplayerSubState currentMultiplayerSubState = UIMultiplayerSubState.NONE;
+    private boolean isSinglePlayer;
 
     @FXML
     public void initialize() {
@@ -162,23 +157,51 @@ public class MainController implements GameClientStateListener {
 
         createMainMenu();
         setupButtonIcons();
-        startCaseButton.setOnAction(event -> {
-            playSound("click.wav");
-            sendCommand("start case");
-            caseInvitationPane.setVisible(false);
-            roomPane.setVisible(true);
-            currentState = UIState.GAME_SINGLE; // Or GAME_MULTI, depends on the flow
-            updateUIVisibility();
-        });
         updateUIVisibility();
     }
 
     private void showCaseInvitation(String invitationText) {
+        VBox invitationBox = new VBox(20);
+        invitationBox.setAlignment(Pos.CENTER);
+        invitationBox.setStyle("-fx-background-color: #1a1a1a;");
+
+        Label titleLabel = new Label("Case Invitation");
+        titleLabel.setStyle("-fx-font-size: 24; -fx-text-fill: #d4af37;");
+
+        TextArea invitationTextArea = new TextArea(invitationText);
+        invitationTextArea.setEditable(false);
+        invitationTextArea.setWrapText(true);
+        invitationTextArea.setStyle("-fx-control-inner-background: #0a0a0a; -fx-text-fill: #00ff00; -fx-font-family: 'Courier New';");
+        invitationTextArea.setPrefWidth(600);
+        invitationTextArea.setPrefHeight(400);
+
+        Button startButton = new Button("Start Case");
+        startButton.setOnAction(event -> handleStartCase());
+
+        invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
+
         Platform.runLater(() -> {
-            caseInvitationTextArea.setText(invitationText);
+            roomPane.getChildren().clear();
+            roomPane.getChildren().add(invitationBox);
             currentState = UIState.CASE_INVITATION;
-            updateUIVisibility();
         });
+    }
+
+    private void handleStartCase() {
+        playSound("click.wav");
+        if (isSinglePlayer) {
+            // Run in a background thread to avoid freezing the UI
+            new Thread(() -> {
+                singlePlayerGame.processCommand("start case");
+                Platform.runLater(() -> {
+                    currentState = UIState.GAME_SINGLE;
+                    updateUIVisibility();
+                });
+            }).start();
+        } else {
+            sendCommand("start case");
+            // The UI will be updated by the server's response
+        }
     }
 
     public void setLaunchArgs(List<String> args) {
@@ -283,18 +306,14 @@ public class MainController implements GameClientStateListener {
 
             switch (currentState) {
                 case CASE_INVITATION:
-                    caseInvitationPane.setVisible(true);
-                    roomPane.setVisible(false);
                     tasksButton.setVisible(false);
                     journalButton.setVisible(false);
                     chatButton.setVisible(false);
                     helpButton.setVisible(false);
-                    exitButton.setVisible(false);
+                    exitButton.setVisible(true);
                     rightInfoPanel.setVisible(false);
                     break;
                 case MENU:
-                    caseInvitationPane.setVisible(false);
-                    roomPane.setVisible(true);
                     nextView = mainMenuVBox;
                     terminalTextArea.clear();
                     terminalTextArea.appendText("Welcome to Detective Game! Please select a mode to begin.\n");
@@ -349,6 +368,7 @@ public class MainController implements GameClientStateListener {
     }
 
     private void startSinglePlayer() {
+        isSinglePlayer = true;
         updateStatus("Starting Single Player...");
         currentState = UIState.CHOOSING_CASE;
         singlePlayerGame = new SinglePlayerMain();
@@ -921,6 +941,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onInGame() {
+        isSinglePlayer = false;
         currentMultiplayerSubState = UIMultiplayerSubState.IN_GAME;
         currentState = UIState.GAME_MULTI;
         updateUIVisibility();

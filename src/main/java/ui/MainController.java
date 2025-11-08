@@ -579,6 +579,8 @@ public class MainController implements GameClientStateListener {
                 handleCaseSelectionInput(input);
             } else if (currentState == UIState.CHOOSING_LANGUAGE) {
                 handleLanguageSelectionInput(input);
+            } else if (currentState == UIState.CASE_INVITATION && !isSinglePlayer) {
+                gameClient.enqueueUserInput(input);
             }
             terminalInputField.clear();
         }

@@ -487,6 +487,7 @@ public class MainController implements GameClientStateListener {
     }
 
     private void startMultiplayer() {
+        isSinglePlayer = false;
         updateStatus("Starting Multiplayer Client...");
         String host = getLaunchArg(0, NetworkConstants.DEFAULT_HOST);
         int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);

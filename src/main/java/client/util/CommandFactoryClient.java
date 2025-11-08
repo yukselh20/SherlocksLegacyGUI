@@ -46,7 +46,7 @@ public class CommandFactoryClient {
         return new JoinPrivateGameCommand(new JoinPrivateGameRequestDTO(arg.toUpperCase()));
 
       case "start case":
-        if (currentClientState == ClientState.IN_LOBBY_AWAITING_START) {
+        if (currentClientState == ClientState.IN_LOBBY_AWAITING_START || currentClientState == ClientState.SHOWING_INVITATION) {
           return isHost ? new StartCaseCommand() : new RequestStartCaseCommand();
         } else {
           System.err.println("CLIENT_FACTORY_HINT: 'start case' can only be used when the lobby is full and awaiting the game to start.");

@@ -839,7 +839,7 @@ public class GameClient implements Runnable {
     if (lu.isGameStarting()) {
         if (listener != null && lu.getCaseInvitation() != null && !lu.getCaseInvitation().isEmpty()) {
             currentState.set(ClientState.SHOWING_INVITATION);
-            listener.onReceiveCaseInvitation(lu.getCaseInvitation());
+            listener.onReceiveCaseInvitation(lu.getCaseInvitation(), isThisClientTheHost());
         } else if (currentState.get() != ClientState.IN_LOBBY_AWAITING_START) {
             printToConsole("The game session is now ready for the host to type 'start case'.");
             currentState.set(ClientState.IN_LOBBY_AWAITING_START);

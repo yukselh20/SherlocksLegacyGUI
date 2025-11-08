@@ -20,5 +20,5 @@ public interface GameClientStateListener {
   void onLobby();
   void onEnterGame(RoomDescriptionDTO initialRoom);
   void onUpdateRoom(RoomDescriptionDTO newRoom);
-    void onReceiveCaseInvitation(String invitation);
+    void onReceiveCaseInvitation(String invitation, boolean isHost);
 }

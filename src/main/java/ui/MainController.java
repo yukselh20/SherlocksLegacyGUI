@@ -160,7 +160,7 @@ public class MainController implements GameClientStateListener {
         updateUIVisibility();
     }
 
-    private void showCaseInvitation(String invitationText) {
+    private void showCaseInvitation(String invitationText, boolean isHost) {
         VBox invitationBox = new VBox(20);
         invitationBox.setAlignment(Pos.CENTER);
         invitationBox.setStyle("-fx-background-color: #1a1a1a;");
@@ -177,8 +177,15 @@ public class MainController implements GameClientStateListener {
 
         Button startButton = new Button("Start Case");
         startButton.setOnAction(event -> handleStartCase());
+        startButton.setDisable(!isHost);
 
         invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
+
+        if (!isHost) {
+            Label waitingLabel = new Label("Waiting for host to start the case...");
+            waitingLabel.setStyle("-fx-text-fill: #d4af37;");
+            invitationBox.getChildren().add(waitingLabel);
+        }
 
         Platform.runLater(() -> {
             roomPane.getChildren().clear();
@@ -446,7 +453,7 @@ public class MainController implements GameClientStateListener {
             langButton.setOnAction(event -> {
                 JsonDTO.LocalizedCaseFile localizedCase = singlePlayerGame.selectCaseAndLanguage(caseFile, langCode);
                 singlePlayerGame.initializeCase(localizedCase);
-                showCaseInvitation(localizedCase.getInvitation());
+                showCaseInvitation(localizedCase.getInvitation(), true);
             });
             langSelectionBox.getChildren().add(langButton);
         }
@@ -477,7 +484,7 @@ public class MainController implements GameClientStateListener {
                 String langCode = langCodes.get(choice - 1);
                 JsonDTO.LocalizedCaseFile localizedCase = singlePlayerGame.selectCaseAndLanguage(selectedCaseFile, langCode);
                 singlePlayerGame.initializeCase(localizedCase);
-                showCaseInvitation(localizedCase.getInvitation());
+                showCaseInvitation(localizedCase.getInvitation(), true);
             } else {
                 terminalTextArea.appendText("Invalid selection. Please choose a valid language number.\n");
             }
@@ -966,7 +973,7 @@ public class MainController implements GameClientStateListener {
     }
 
     @Override
-    public void onReceiveCaseInvitation(String invitation) {
-        showCaseInvitation(invitation);
+    public void onReceiveCaseInvitation(String invitation, boolean isHost) {
+        showCaseInvitation(invitation, isHost);
     }
 }

@@ -37,6 +37,7 @@ import ui.util.TextAreaOutputStream;
 import ui.windows.ChatWindow;
 import ui.windows.JournalWindow;
 import ui.windows.TasksWindow;
+import ui.windows.HelpWindow;
 
 public class MainController implements GameClientStateListener {
 
@@ -73,6 +74,10 @@ public class MainController implements GameClientStateListener {
     @FXML
     private Button chatButton;
     @FXML
+    private Button helpButton;
+    @FXML
+    private Button exitButton;
+    @FXML
     private Label unreadChatLabel;
     @FXML
     private StackPane roomPane;
@@ -92,6 +97,7 @@ public class MainController implements GameClientStateListener {
     private JournalWindow journalWindow;
     private ChatWindow chatWindow;
     private TasksWindow tasksWindow;
+    private HelpWindow helpWindow;
     private RoomView roomView;
     private int unreadChatCount = 0;
 
@@ -123,6 +129,17 @@ public class MainController implements GameClientStateListener {
             playSound("click.wav");
             openChatWindow();
         });
+
+        helpButton.setOnAction(event -> {
+            playSound("click.wav");
+            openHelpWindow();
+        });
+
+        exitButton.setOnAction(event -> {
+            playSound("click.wav");
+            sendCommand("exit");
+        });
+
         updateStatus("GUI Ready. Please select a game mode.");
         unreadChatLabel.setVisible(false);
         bottomSplitPane.setDividerPositions(0.7);
@@ -254,6 +271,8 @@ public class MainController implements GameClientStateListener {
                     tasksButton.setVisible(false);
                     journalButton.setVisible(false);
                     chatButton.setVisible(false);
+                    helpButton.setVisible(false);
+                    exitButton.setVisible(false);
                     rightInfoPanel.setVisible(false);
                     break;
                 case GAME_SINGLE:
@@ -261,6 +280,8 @@ public class MainController implements GameClientStateListener {
                     tasksButton.setVisible(true);
                     journalButton.setVisible(true);
                     chatButton.setVisible(false);
+                    helpButton.setVisible(true);
+                    exitButton.setVisible(true);
                     rightInfoPanel.setVisible(true);
                     break;
                 case GAME_MULTI:
@@ -268,6 +289,8 @@ public class MainController implements GameClientStateListener {
                     tasksButton.setVisible(true);
                     journalButton.setVisible(true);
                     chatButton.setVisible(true);
+                    helpButton.setVisible(true);
+                    exitButton.setVisible(true);
                     rightInfoPanel.setVisible(true);
                     break;
             }
@@ -529,6 +552,13 @@ public class MainController implements GameClientStateListener {
         chatWindow.show();
         unreadChatCount = 0;
         updateUnreadChatLabel();
+    }
+
+    private void openHelpWindow() {
+        if (helpWindow == null) {
+            helpWindow = new HelpWindow();
+        }
+        helpWindow.show();
     }
 
     public void incrementUnreadChat() {

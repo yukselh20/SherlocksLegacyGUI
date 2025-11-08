@@ -32,6 +32,18 @@
                style="-fx-background-color: red; -fx-text-fill: white; -fx-background-radius: 10; -fx-padding: 2 6 2 6; -fx-font-size: 10; -fx-font-weight: bold;"
                StackPane.alignment="TOP_RIGHT" translateX="-5" translateY="5"/>
       </StackPane>
+
+      <Button fx:id="helpButton" text="Help" styleClass="top-button">
+        <font>
+          <Font size="14"/>
+        </font>
+      </Button>
+
+      <Button fx:id="exitButton" text="Exit" styleClass="top-button">
+        <font>
+          <Font size="14"/>
+        </font>
+      </Button>
       
       <Region HBox.hgrow="ALWAYS"/>
       

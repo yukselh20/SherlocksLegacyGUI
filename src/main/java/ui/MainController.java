@@ -45,6 +45,7 @@ public class MainController implements GameClientStateListener {
         MENU,
         CHOOSING_CASE,
         CHOOSING_LANGUAGE,
+        CASE_INVITATION,
         GAME_SINGLE,
         GAME_MULTI
     }
@@ -81,6 +82,12 @@ public class MainController implements GameClientStateListener {
     private Label unreadChatLabel;
     @FXML
     private StackPane roomPane;
+    @FXML
+    private StackPane caseInvitationPane;
+    @FXML
+    private TextArea caseInvitationTextArea;
+    @FXML
+    private Button startCaseButton;
     @FXML
     private VBox rightInfoPanel;
     @FXML
@@ -155,7 +162,23 @@ public class MainController implements GameClientStateListener {
 
         createMainMenu();
         setupButtonIcons();
+        startCaseButton.setOnAction(event -> {
+            playSound("click.wav");
+            sendCommand("start case");
+            caseInvitationPane.setVisible(false);
+            roomPane.setVisible(true);
+            currentState = UIState.GAME_SINGLE; // Or GAME_MULTI, depends on the flow
+            updateUIVisibility();
+        });
         updateUIVisibility();
+    }
+
+    private void showCaseInvitation(String invitationText) {
+        Platform.runLater(() -> {
+            caseInvitationTextArea.setText(invitationText);
+            currentState = UIState.CASE_INVITATION;
+            updateUIVisibility();
+        });
     }
 
     public void setLaunchArgs(List<String> args) {
@@ -259,7 +282,19 @@ public class MainController implements GameClientStateListener {
             Node nextView = null;
 
             switch (currentState) {
+                case CASE_INVITATION:
+                    caseInvitationPane.setVisible(true);
+                    roomPane.setVisible(false);
+                    tasksButton.setVisible(false);
+                    journalButton.setVisible(false);
+                    chatButton.setVisible(false);
+                    helpButton.setVisible(false);
+                    exitButton.setVisible(false);
+                    rightInfoPanel.setVisible(false);
+                    break;
                 case MENU:
+                    caseInvitationPane.setVisible(false);
+                    roomPane.setVisible(true);
                     nextView = mainMenuVBox;
                     terminalTextArea.clear();
                     terminalTextArea.appendText("Welcome to Detective Game! Please select a mode to begin.\n");
@@ -391,8 +426,7 @@ public class MainController implements GameClientStateListener {
             langButton.setOnAction(event -> {
                 JsonDTO.LocalizedCaseFile localizedCase = singlePlayerGame.selectCaseAndLanguage(caseFile, langCode);
                 singlePlayerGame.initializeCase(localizedCase);
-                currentState = UIState.GAME_SINGLE;
-                updateUIVisibility();
+                showCaseInvitation(localizedCase.getInvitation());
             });
             langSelectionBox.getChildren().add(langButton);
         }
@@ -423,8 +457,7 @@ public class MainController implements GameClientStateListener {
                 String langCode = langCodes.get(choice - 1);
                 JsonDTO.LocalizedCaseFile localizedCase = singlePlayerGame.selectCaseAndLanguage(selectedCaseFile, langCode);
                 singlePlayerGame.initializeCase(localizedCase);
-                currentState = UIState.GAME_SINGLE;
-                updateUIVisibility();
+                showCaseInvitation(localizedCase.getInvitation());
             } else {
                 terminalTextArea.appendText("Invalid selection. Please choose a valid language number.\n");
             }
@@ -891,5 +924,10 @@ public class MainController implements GameClientStateListener {
         currentMultiplayerSubState = UIMultiplayerSubState.IN_GAME;
         currentState = UIState.GAME_MULTI;
         updateUIVisibility();
+    }
+
+    @Override
+    public void onReceiveCaseInvitation(String invitation) {
+        showCaseInvitation(invitation);
     }
 }

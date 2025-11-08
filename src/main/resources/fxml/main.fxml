@@ -56,6 +56,15 @@
     <StackPane fx:id="roomPane" style="-fx-background-color: #1a1a1a;">
       <Label text="Room View" style="-fx-text-fill: #808080; -fx-font-size: 24;"/>
     </StackPane>
+    <StackPane fx:id="caseInvitationPane" style="-fx-background-color: #1a1a1a;" visible="false">
+        <VBox alignment="CENTER" spacing="20">
+            <Label text="Case Invitation" style="-fx-font-size: 24; -fx-text-fill: #d4af37;"/>
+            <TextArea fx:id="caseInvitationTextArea" editable="false" wrapText="true"
+                      style="-fx-control-inner-background: #0a0a0a; -fx-text-fill: #00ff00; -fx-font-family: 'Courier New';"
+                      prefWidth="600" prefHeight="400"/>
+            <Button fx:id="startCaseButton" text="Start Case"/>
+        </VBox>
+    </StackPane>
   </center>
 
   <!-- Right: Info Panel -->

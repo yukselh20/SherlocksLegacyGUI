@@ -18,4 +18,5 @@ public interface GameClientStateListener {
   void onPrivateGameEntry();
   void onLobby();
   void onInGame();
+    void onReceiveCaseInvitation(String invitation);
 }

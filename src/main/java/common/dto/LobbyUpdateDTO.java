@@ -16,6 +16,7 @@ public class LobbyUpdateDTO implements Serializable {
   private final List<String> playerActualIdsInSession;
   private final String hostPlayerId;
   private final boolean gameStarting;
+  private final String caseInvitation;
 
   @JsonCreator
   public LobbyUpdateDTO(
@@ -24,12 +25,14 @@ public class LobbyUpdateDTO implements Serializable {
           @JsonProperty("playerDisplayIdsInLobbyOrGame") List<String> playerDisplayIds,
           @JsonProperty("playerIdsInSession") List<String> playerActualIds, // Corrected from "playerActualIdsInSession"
           @JsonProperty("hostPlayerId") String hostPlayerId,
-          @JsonProperty("gameStarting") boolean gameStarting) {
+          @JsonProperty("gameStarting") boolean gameStarting,
+          @JsonProperty("caseInvitation") String caseInvitation) {
     this.message = message;
     this.playerDisplayIdsInLobbyOrGame = playerDisplayIds != null ? new ArrayList<>(playerDisplayIds) : new ArrayList<>();
     this.playerActualIdsInSession = playerActualIds != null ? new ArrayList<>(playerActualIds) : new ArrayList<>();
     this.hostPlayerId = hostPlayerId;
     this.gameStarting = gameStarting;
+    this.caseInvitation = caseInvitation;
   }
 
   public String getMessage() {
@@ -50,6 +53,10 @@ public class LobbyUpdateDTO implements Serializable {
 
   public boolean isGameStarting() {
     return gameStarting;
+  }
+
+  public String getCaseInvitation() {
+    return caseInvitation;
   }
 
   @Override

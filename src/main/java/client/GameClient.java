@@ -748,7 +748,7 @@ public class GameClient implements Runnable {
               + (hgr.getGameCode() != null
                   ? ". Private Code for others: " + hgr.getGameCode()
                   : ". This is a public game."));
-      printToConsole("Waiting for another player to join...");
+      printToConsole("Waiting for another player to join... (type cancel to cancel the session)");
       currentState.set(ClientState.HOSTING_LOBBY_WAITING);
     } else {
       printToConsole("Failed to host game: " + hgr.getMessage());

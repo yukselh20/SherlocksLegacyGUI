@@ -212,9 +212,6 @@ public class GameClient implements Runnable {
           case IN_LOBBY_AWAITING_START:
             listener.onLobby();
             break;
-          case IN_GAME:
-            listener.onInGame();
-            break;
           case CONNECTING:
             listener.onConnecting();
             break;

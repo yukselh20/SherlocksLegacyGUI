@@ -712,10 +712,10 @@ public class MainController implements GameClientStateListener {
                 caseButton.setOnAction(event -> sendCommand(String.valueOf(caseNum)));
                 caseSelectionBox.getChildren().add(caseButton);
             }
-            terminalTextArea.appendText("0. Back\n");
+            terminalTextArea.appendText("3. Back\n");
             terminalTextArea.appendText("---------------------\n");
             Button backButton = new Button("Back");
-            backButton.setOnAction(event -> sendCommand("0"));
+            backButton.setOnAction(event -> sendCommand("3"));
             caseSelectionBox.getChildren().add(backButton);
             roomPane.getChildren().clear();
             roomPane.getChildren().add(caseSelectionBox);

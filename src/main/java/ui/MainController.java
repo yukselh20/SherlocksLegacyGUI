@@ -373,8 +373,8 @@ public class MainController implements GameClientStateListener {
             });
             langSelectionBox.getChildren().add(langButton);
         }
+        terminalTextArea.appendText("0. Back\n");
         terminalTextArea.appendText("-------------------------------------\n");
-        terminalTextArea.appendText("Type 'back' to return to Case Selection.\n");
         Button backButton = new Button("Back to Case Selection");
         backButton.setOnAction(event -> showSinglePlayerCaseSelection());
         langSelectionBox.getChildren().add(backButton);
@@ -383,6 +383,10 @@ public class MainController implements GameClientStateListener {
     }
 
     private void handleLanguageSelectionInput(String input) {
+        if (input.equals("0") || input.equalsIgnoreCase("back")) {
+            showSinglePlayerCaseSelection();
+            return;
+        }
         try {
             int choice = Integer.parseInt(input);
             List<String> langCodes = new java.util.ArrayList<>(selectedCaseFile.getLocalizations().keySet());
@@ -398,11 +402,7 @@ public class MainController implements GameClientStateListener {
                 terminalTextArea.appendText("Invalid selection. Please choose a valid language number.\n");
             }
         } catch (NumberFormatException e) {
-            if (input.equalsIgnoreCase("back")) {
-                showSinglePlayerCaseSelection();
-            } else {
-                terminalTextArea.appendText("Invalid command. Please enter a number.\n");
-            }
+            terminalTextArea.appendText("Invalid command. Please enter a number or '0' to go back.\n");
         }
     }
 

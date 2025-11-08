@@ -649,7 +649,7 @@ public class MainController implements GameClientStateListener {
     }
 
     public void sendCommand(String command) {
-        if (currentState == UIState.GAME_MULTI && gameClient != null) {
+        if ((currentState == UIState.GAME_MULTI || (currentState == UIState.CASE_INVITATION && !isSinglePlayer)) && gameClient != null) {
             gameClient.enqueueUserInput(command);
         } else if (currentState == UIState.GAME_SINGLE && singlePlayerGame != null) {
             singlePlayerGame.processCommand(command);
@@ -946,7 +946,16 @@ public class MainController implements GameClientStateListener {
         isSinglePlayer = false;
         currentMultiplayerSubState = UIMultiplayerSubState.IN_GAME;
         currentState = UIState.GAME_MULTI;
-        updateUIVisibility();
+        Platform.runLater(() -> {
+            roomPane.getChildren().clear();
+            roomPane.getChildren().add(roomView);
+            tasksButton.setVisible(true);
+            journalButton.setVisible(true);
+            chatButton.setVisible(true);
+            helpButton.setVisible(true);
+            exitButton.setVisible(true);
+            rightInfoPanel.setVisible(true);
+        });
     }
 
     @Override

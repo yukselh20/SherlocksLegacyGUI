@@ -26,6 +26,7 @@ public enum ClientState {
   SENDING_JOIN_PRIVATE_REQUEST(false), // Waits for server response
 
   // In-Session / In-Game States
+  SHOWING_INVITATION(true), // Special state for showing the invitation screen
   IN_LOBBY_AWAITING_START(true), // Interactive (host: 'start case', guest: 'request...', chat)
   IN_GAME(true), // Fully interactive game play
 

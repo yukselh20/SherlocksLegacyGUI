@@ -289,6 +289,7 @@ public class GameClient implements Runnable {
         handleHostLanguageSelection(input);
         break;
 
+      case SHOWING_INVITATION:
       case HOSTING_LOBBY_WAITING:
       case IN_LOBBY_AWAITING_START:
         if (input.equalsIgnoreCase("cancel")) {
@@ -831,9 +832,8 @@ public class GameClient implements Runnable {
 
     if (lu.isGameStarting()) {
         if (listener != null && lu.getCaseInvitation() != null && !lu.getCaseInvitation().isEmpty()) {
+            currentState.set(ClientState.SHOWING_INVITATION);
             listener.onReceiveCaseInvitation(lu.getCaseInvitation());
-            // This is a special case where we don't want to immediately update the state
-            // because the UI is showing the invitation.
         } else if (currentState.get() != ClientState.IN_LOBBY_AWAITING_START) {
             printToConsole("The game session is now ready for the host to type 'start case'.");
             currentState.set(ClientState.IN_LOBBY_AWAITING_START);

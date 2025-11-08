@@ -943,7 +943,7 @@ public class MainController implements GameClientStateListener {
     }
 
     @Override
-    public void onInGame() {
+    public void onEnterGame(RoomDescriptionDTO initialRoom) {
         isSinglePlayer = false;
         currentMultiplayerSubState = UIMultiplayerSubState.IN_GAME;
         currentState = UIState.GAME_MULTI;
@@ -956,7 +956,13 @@ public class MainController implements GameClientStateListener {
             helpButton.setVisible(true);
             exitButton.setVisible(true);
             rightInfoPanel.setVisible(true);
+            updateRoomView(initialRoom);
         });
+    }
+
+    @Override
+    public void onUpdateRoom(RoomDescriptionDTO newRoom) {
+        updateRoomView(newRoom);
     }
 
     @Override

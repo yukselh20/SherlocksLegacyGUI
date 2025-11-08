@@ -3,6 +3,7 @@ package client;
 import java.util.List;
 import JsonDTO.CaseFile;
 import common.dto.PublicGameInfoDTO;
+import common.dto.RoomDescriptionDTO;
 
 public interface GameClientStateListener {
   void onDisconnected();
@@ -17,6 +18,7 @@ public interface GameClientStateListener {
   void onPublicGamesList(List<PublicGameInfoDTO> games);
   void onPrivateGameEntry();
   void onLobby();
-  void onInGame();
+  void onEnterGame(RoomDescriptionDTO initialRoom);
+  void onUpdateRoom(RoomDescriptionDTO newRoom);
     void onReceiveCaseInvitation(String invitation);
 }

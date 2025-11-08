@@ -716,6 +716,18 @@ public class GameClient implements Runnable {
   }
 
   private void handleRoomDescription(RoomDescriptionDTO rd) {
+    // This method now decides whether it's the start of the game or just a move.
+    if (currentState.get() != ClientState.IN_GAME) {
+        currentState.set(ClientState.IN_GAME);
+        if (listener != null) {
+            listener.onEnterGame(rd);
+        }
+    } else {
+        if (listener != null) {
+            listener.onUpdateRoom(rd);
+        }
+    }
+    // We still print to console for non-GUI users or logging
     StringBuilder sb = new StringBuilder();
     sb.append("\n--- Location: ").append(rd.getName()).append(" ---\n");
     sb.append(rd.getDescription()).append("\n");
@@ -735,9 +747,6 @@ public class GameClient implements Runnable {
       if (!rd.getExits().isEmpty()) sb.setLength(sb.length() - 2);
     }
     printToConsole(sb.toString());
-    if (currentState.get() != ClientState.IN_GAME) {
-      currentState.set(ClientState.IN_GAME);
-    }
   }
 
   private void handleHostGameResponse(HostGameResponseDTO hgr) {

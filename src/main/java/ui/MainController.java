@@ -427,6 +427,13 @@ public class MainController implements GameClientStateListener {
         });
     }
 
+    public void returnToMultiplayerMenu() {
+        Platform.runLater(() -> {
+            // This will be called by the parser when the host cancels
+            onMainMenu();
+        });
+    }
+
     private void handleCaseSelectionInput(String input) {
         if (input.equals("0") || input.equalsIgnoreCase("back")) {
             currentState = UIState.MENU;

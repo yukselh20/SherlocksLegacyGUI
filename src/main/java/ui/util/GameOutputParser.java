@@ -23,7 +23,8 @@ public class GameOutputParser {
   private static final Pattern CHAT_PATTERN = Pattern.compile("\\[CHAT\\] (.+?): (.+)");
   private static final Pattern JOURNAL_PATTERN = Pattern.compile("\\[JOURNAL UPDATE\\] (.+)");
   private static final Pattern RESPONSE_PATTERN = Pattern.compile("(.+) says: (.+)");
-  private static final Pattern RETURN_TO_MENU_PATTERN = Pattern.compile("Returning to case selection\\.");
+  private static final Pattern RETURN_TO_CASE_SELECTION_PATTERN = Pattern.compile("Returning to case selection\\.");
+  private static final Pattern RETURN_TO_MAIN_MENU_PATTERN = Pattern.compile("\\[SERVER\\] Returning to main menu\\.");
 
   public GameOutputParser(MainController controller) {
     this.mainController = controller;
@@ -73,9 +74,15 @@ public class GameOutputParser {
     }
 
     // Check for return to menu
-    Matcher returnMatcher = RETURN_TO_MENU_PATTERN.matcher(line);
-    if (returnMatcher.find()) {
+    Matcher returnCaseMatcher = RETURN_TO_CASE_SELECTION_PATTERN.matcher(line);
+    if (returnCaseMatcher.find()) {
       mainController.showCaseSelectionMenu();
+      return;
+    }
+
+    Matcher returnMainMenuMatcher = RETURN_TO_MAIN_MENU_PATTERN.matcher(line);
+    if (returnMainMenuMatcher.find()) {
+      mainController.returnToMultiplayerMenu();
       return;
     }
   }

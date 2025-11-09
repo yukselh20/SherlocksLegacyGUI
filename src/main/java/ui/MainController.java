@@ -177,14 +177,13 @@ public class MainController implements GameClientStateListener {
 
         Button startButton = new Button("Start Case");
         startButton.setOnAction(event -> handleStartCase());
-        startButton.setDisable(!isHost);
 
-        invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
-
-        if (!isHost) {
-            Label waitingLabel = new Label("Waiting for host to start the case...");
-            waitingLabel.setStyle("-fx-text-fill: #d4af37;");
-            invitationBox.getChildren().add(waitingLabel);
+        if (isHost) {
+            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
+        } else {
+            Button cancelButton = new Button("Cancel");
+            cancelButton.setOnAction(event -> sendCommand("cancel"));
+            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton, cancelButton);
         }
 
         Platform.runLater(() -> {

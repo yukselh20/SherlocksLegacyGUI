@@ -183,6 +183,9 @@ public class GameClient implements Runnable {
     consoleLock.lock();
     try {
       ClientState cs = currentState.get();
+      if (cs == ClientState.SHOWING_INVITATION) {
+        return;
+      }
       if (listener != null) {
         switch (cs) {
           case CONNECTED_IDLE:

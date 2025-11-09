@@ -5,6 +5,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
@@ -130,19 +131,21 @@ public class RoomView extends StackPane {
    */
   private ClickableElement createClickableElement(String name, double xPos, double yPos, boolean isSuspect) {
     ClickableElement element = new ClickableElement(name, isSuspect);
-    
+
     // Position element (will be bound to actual position after layout)
     element.setTranslateX(xPos * 800 - 40); // Approximate positioning
     element.setTranslateY(yPos * 600 - 40);
-    
-    // Set click handler
-    element.setOnMouseClicked(e -> {
-      if (isSuspect) {
-        showSuspectDialog(name);
-      } else {
-        showObjectDialog(name);
-      }
-    });
+
+    // Set click handler, unless it's a player character
+    if (!name.startsWith("Player-")) {
+      element.setOnMouseClicked(e -> {
+        if (isSuspect) {
+          showSuspectDialog(name);
+        } else {
+          showObjectDialog(name);
+        }
+      });
+    }
 
     return element;
   }
@@ -151,6 +154,35 @@ public class RoomView extends StackPane {
    * Shows a dialog for interacting with a suspect.
    */
   private void showSuspectDialog(String suspectName) {
+    if ("Dr. Watson".equals(suspectName)) {
+      showAskWatsonDialog();
+    } else {
+      showGenericSuspectDialog(suspectName);
+    }
+  }
+
+  /**
+   * Shows a dialog for asking Dr. Watson a question.
+   */
+  private void showAskWatsonDialog() {
+    TextInputDialog dialog = new TextInputDialog();
+    dialog.setTitle("Ask Dr. Watson");
+    dialog.setHeaderText("You can ask Dr. Watson for a hint.");
+    dialog.setContentText("Your question:");
+
+    Optional<String> result = dialog.showAndWait();
+    result.ifPresent(question -> {
+      if (!question.trim().isEmpty()) {
+        mainController.sendCommand("ask watson " + question);
+        showSpeechBubble(suspects.get("Dr. Watson"), "Asking Dr. Watson...");
+      }
+    });
+  }
+
+  /**
+   * Shows a generic dialog for interacting with any suspect other than Dr. Watson.
+   */
+  private void showGenericSuspectDialog(String suspectName) {
     Alert dialog = new Alert(Alert.AlertType.NONE);
     dialog.setTitle("Interact with " + suspectName);
     dialog.setHeaderText(suspectName);
@@ -163,7 +195,7 @@ public class RoomView extends StackPane {
     dialog.getButtonTypes().setAll(questionButton, deduceButton, cancelButton);
 
     Optional<ButtonType> result = dialog.showAndWait();
-    
+
     if (result.isPresent()) {
       if (result.get() == questionButton) {
         mainController.sendCommand("question " + suspectName);
@@ -291,20 +323,24 @@ public class RoomView extends StackPane {
       label.setAlignment(Pos.CENTER);
 
       this.getChildren().addAll(circle, label);
-      this.setStyle("-fx-cursor: hand;");
 
-      // Hover effect
-      this.setOnMouseEntered(e -> {
-        circle.setScaleX(1.1);
-        circle.setScaleY(1.1);
-        circle.setStrokeWidth(4);
-      });
+      // Make non-player characters interactive
+      if (!name.startsWith("Player-")) {
+        this.setStyle("-fx-cursor: hand;");
 
-      this.setOnMouseExited(e -> {
-        circle.setScaleX(1.0);
-        circle.setScaleY(1.0);
-        circle.setStrokeWidth(3);
-      });
+        // Hover effect
+        this.setOnMouseEntered(e -> {
+          circle.setScaleX(1.1);
+          circle.setScaleY(1.1);
+          circle.setStrokeWidth(4);
+        });
+
+        this.setOnMouseExited(e -> {
+          circle.setScaleX(1.0);
+          circle.setScaleY(1.0);
+          circle.setStrokeWidth(3);
+        });
+      }
     }
 
     public String getName() {

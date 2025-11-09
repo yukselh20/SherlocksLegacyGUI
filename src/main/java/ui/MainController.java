@@ -177,12 +177,12 @@ public class MainController implements GameClientStateListener {
 
         Button startButton = new Button("Start Case");
         startButton.setOnAction(event -> handleStartCase());
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setOnAction(event -> sendCommand("cancel"));
 
         if (isHost) {
-            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
+            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton, cancelButton);
         } else {
-            Button cancelButton = new Button("Cancel");
-            cancelButton.setOnAction(event -> sendCommand("cancel"));
             invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton, cancelButton);
         }
 
@@ -190,6 +190,7 @@ public class MainController implements GameClientStateListener {
             roomPane.getChildren().clear();
             roomPane.getChildren().add(invitationBox);
             currentState = UIState.CASE_INVITATION;
+            updateUIVisibility();
         });
     }
 

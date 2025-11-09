@@ -584,7 +584,7 @@ public class MainController implements GameClientStateListener {
         if (!input.isEmpty()) {
             if (currentState == UIState.GAME_SINGLE) {
                 singlePlayerGame.processCommand(input);
-            } else if (currentState == UIState.GAME_MULTI && gameClient != null) {
+            } else if ((currentState == UIState.GAME_MULTI || currentState == UIState.MULTIPLAYER_MENU) && gameClient != null) {
                 if (currentMultiplayerSubState == UIMultiplayerSubState.MAIN_MENU && input.equals("3")) {
                     gameClient.stopClient();
                     if (gameClientThread != null) {
@@ -669,7 +669,10 @@ public class MainController implements GameClientStateListener {
     }
 
     public void sendCommand(String command) {
-        if ((currentState == UIState.GAME_MULTI || (currentState == UIState.CASE_INVITATION && !isSinglePlayer)) && gameClient != null) {
+        if ((currentState == UIState.GAME_MULTI
+                || currentState == UIState.MULTIPLAYER_MENU
+                || (currentState == UIState.CASE_INVITATION && !isSinglePlayer))
+                && gameClient != null) {
             gameClient.enqueueUserInput(command);
         } else if (currentState == UIState.GAME_SINGLE && singlePlayerGame != null) {
             singlePlayerGame.processCommand(command);

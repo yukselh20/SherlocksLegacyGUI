@@ -175,16 +175,15 @@ public class MainController implements GameClientStateListener {
         invitationTextArea.setPrefWidth(600);
         invitationTextArea.setPrefHeight(400);
 
+        Button startButton = new Button("Start Case");
+        startButton.setOnAction(event -> handleStartCase());
+
         if (isHost) {
-            Button startButton = new Button("Start Case");
-            startButton.setOnAction(event -> handleStartCase());
             invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
         } else {
-            Button requestStartButton = new Button("Request Start Case");
-            requestStartButton.setOnAction(event -> sendCommand("requeststartcase"));
             Button cancelButton = new Button("Cancel");
             cancelButton.setOnAction(event -> sendCommand("cancel"));
-            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, requestStartButton, cancelButton);
+            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton, cancelButton);
         }
 
         Platform.runLater(() -> {

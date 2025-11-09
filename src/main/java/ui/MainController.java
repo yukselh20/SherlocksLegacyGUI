@@ -47,7 +47,8 @@ public class MainController implements GameClientStateListener {
         CHOOSING_LANGUAGE,
         CASE_INVITATION,
         GAME_SINGLE,
-        GAME_MULTI
+        GAME_MULTI,
+        MULTIPLAYER_MENU
     }
 
     private enum UIMultiplayerSubState {
@@ -330,6 +331,14 @@ public class MainController implements GameClientStateListener {
                     terminalTextArea.appendText("2. Multiplayer (Join/Host)\n");
                     terminalTextArea.appendText("3. Start Server Only\n");
                     terminalTextArea.appendText("4. Quit\n");
+                    tasksButton.setVisible(false);
+                    journalButton.setVisible(false);
+                    chatButton.setVisible(false);
+                    helpButton.setVisible(false);
+                    exitButton.setVisible(false);
+                    rightInfoPanel.setVisible(false);
+                    break;
+                case MULTIPLAYER_MENU:
                     tasksButton.setVisible(false);
                     journalButton.setVisible(false);
                     chatButton.setVisible(false);
@@ -745,6 +754,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onMainMenu() {
         currentMultiplayerSubState = UIMultiplayerSubState.MAIN_MENU;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Multiplayer Menu ---\n");
@@ -774,6 +785,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onHostGameOptions() {
         currentMultiplayerSubState = UIMultiplayerSubState.HOST_OPTIONS;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Host Game Options ---\n");
@@ -798,6 +811,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onCaseSelection(List<JsonDTO.CaseFile> cases) {
         currentMultiplayerSubState = UIMultiplayerSubState.CASE_SELECTION;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Select a Case ---\n");
@@ -824,6 +839,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onLanguageSelection(JsonDTO.CaseFile caseFile) {
         currentMultiplayerSubState = UIMultiplayerSubState.LANGUAGE_SELECTION;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Select a Language for " + caseFile.getUniversalTitle() + " ---\n");
@@ -872,6 +889,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onJoinGameOptions() {
         currentMultiplayerSubState = UIMultiplayerSubState.JOIN_OPTIONS;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Join Game Options ---\n");
@@ -896,6 +915,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onPublicGamesList(List<PublicGameInfoDTO> games) {
         currentMultiplayerSubState = UIMultiplayerSubState.PUBLIC_GAMES_LIST;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             terminalTextArea.clear();
             terminalTextArea.appendText("--- Public Games ---\n");
@@ -923,6 +944,8 @@ public class MainController implements GameClientStateListener {
     @Override
     public void onPrivateGameEntry() {
         currentMultiplayerSubState = UIMultiplayerSubState.PRIVATE_GAME_ENTRY;
+        currentState = UIState.MULTIPLAYER_MENU;
+        updateUIVisibility();
         Platform.runLater(() -> {
             VBox privateGameBox = new VBox(15);
             privateGameBox.setAlignment(Pos.CENTER);

@@ -56,6 +56,7 @@ public class GameClient implements Runnable {
   // Caches and temporary state
   private List<JsonDTO.CaseFile> availableCasesCache;
   private List<PublicGameInfoDTO> publicGamesCache;
+  private List<String> currentTasks;
   private int currentExamQuestionNumberBeingAnswered = -1;
   private ClientState preWaitingState;
   private boolean intentToHostPublic;
@@ -837,6 +838,9 @@ public class GameClient implements Runnable {
     }
 
     if (lu.isGameStarting()) {
+        if (lu.getTasks() != null && !lu.getTasks().isEmpty()) {
+            this.currentTasks = lu.getTasks();
+        }
         if (listener != null && lu.getCaseInvitation() != null && !lu.getCaseInvitation().isEmpty()) {
             currentState.set(ClientState.SHOWING_INVITATION);
             listener.onReceiveCaseInvitation(lu.getCaseInvitation(), isThisClientTheHost());
@@ -1168,7 +1172,11 @@ public class GameClient implements Runnable {
     printToConsole(nmd.toString());
   }
 
-  // REPLACE this method
+    public List<String> getCurrentCaseTasks() {
+        return currentTasks;
+    }
+
+    // REPLACE this method
   private void handleHostLanguageSelection(String input) {
     if ("0".equals(input)) {
       // Go back to case selection

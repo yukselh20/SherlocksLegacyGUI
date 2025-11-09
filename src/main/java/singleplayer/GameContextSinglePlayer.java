@@ -292,7 +292,11 @@ public void handlePlayerCancelLobby(String playerId) {
     return this.selectedCase;
   }
 
-  @Override
+    public CaseData getCaseFile() {
+        return this.selectedCase;
+    }
+
+    @Override
   public Detective getPlayerDetective(String playerId) {
     return this.detective;
   }

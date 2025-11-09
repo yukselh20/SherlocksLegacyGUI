@@ -51,13 +51,6 @@ public class TasksWindow {
     scrollPane.setContent(tasksContainer);
     root.setCenter(scrollPane);
 
-    // Add some placeholder tasks
-    addTask("Find the thief", false);
-    addTask("Recover the sapphire", false);
-    addTask("Question all suspects", false);
-    addTask("Examine all objects in the room", false);
-    addTask("Consider how the glass was broken", false);
-
     // Bottom: Instructions
     Label instructionsLabel = new Label("Tip: Check off tasks as you complete them to track your progress.");
     instructionsLabel.setStyle("-fx-text-fill: #999999; -fx-font-size: 11; -fx-font-style: italic;");

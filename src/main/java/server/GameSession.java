@@ -121,7 +121,8 @@ public class GameSession {
             new ArrayList<>(getPlayerActualIds()),
             (player1 != null ? player1.getPlayerId() : null),
             true,
-            caseFile.getInvitation());
+            caseFile.getInvitation(),
+            caseFile.getTasks());
     broadcast(gameReadyMsg, null);
     broadcast(new TextMessage("--- Case Invitation ---\n" + caseFile.getInvitation() + "\n\nHost (" + player1.getDisplayId() + ") should type 'start case' to begin.", false), null);
   }

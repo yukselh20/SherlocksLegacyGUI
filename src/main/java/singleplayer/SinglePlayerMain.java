@@ -99,4 +99,11 @@ public class SinglePlayerMain {
     public GameContextSinglePlayer getGameContext() {
         return this.gameContext;
     }
+
+    public List<String> getCurrentCaseTasks() {
+        if (gameContext != null && gameContext.getCaseFile() != null) {
+            return gameContext.getCaseFile().getTasks();
+        }
+        return null;
+    }
 }

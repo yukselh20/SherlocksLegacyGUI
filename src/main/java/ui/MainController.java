@@ -628,6 +628,21 @@ public class MainController implements GameClientStateListener {
         if (tasksWindow == null) {
             tasksWindow = new TasksWindow();
         }
+
+        // Dynamically load tasks based on the current game context
+        if (isSinglePlayer && singlePlayerGame != null) {
+            List<String> tasks = singlePlayerGame.getCurrentCaseTasks();
+            if (tasks != null) {
+                tasksWindow.loadTasks(tasks);
+            }
+        } else if (!isSinglePlayer && gameClient != null) {
+            // Assuming GameClient has a method to get tasks
+            List<String> tasks = gameClient.getCurrentCaseTasks();
+            if (tasks != null) {
+                tasksWindow.loadTasks(tasks);
+            }
+        }
+
         tasksWindow.show();
     }
 

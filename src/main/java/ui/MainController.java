@@ -314,6 +314,16 @@ public class MainController implements GameClientStateListener {
             Node nextView = null;
 
             switch (currentState) {
+                case CHOOSING_CASE:
+                case CHOOSING_LANGUAGE:
+                    // These states manage their own views, but we need to ensure game buttons are off
+                    tasksButton.setVisible(false);
+                    journalButton.setVisible(false);
+                    chatButton.setVisible(false);
+                    helpButton.setVisible(false);
+                    exitButton.setVisible(false);
+                    rightInfoPanel.setVisible(false);
+                    return; // Return early as the view is handled by show... methods
                 case CASE_INVITATION:
                     tasksButton.setVisible(false);
                     journalButton.setVisible(false);
@@ -423,6 +433,7 @@ public class MainController implements GameClientStateListener {
     public void showCaseSelectionMenu() {
         Platform.runLater(() -> {
             currentState = UIState.CHOOSING_CASE;
+            updateUIVisibility();
             showSinglePlayerCaseSelection();
         });
     }
@@ -681,7 +692,7 @@ public class MainController implements GameClientStateListener {
                 || (currentState == UIState.CASE_INVITATION && !isSinglePlayer))
                 && gameClient != null) {
             gameClient.enqueueUserInput(command);
-        } else if (currentState == UIState.GAME_SINGLE && singlePlayerGame != null) {
+        } else if ((currentState == UIState.GAME_SINGLE || (currentState == UIState.CASE_INVITATION && isSinglePlayer)) && singlePlayerGame != null) {
             singlePlayerGame.processCommand(command);
         }
     }

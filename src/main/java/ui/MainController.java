@@ -113,6 +113,7 @@ public class MainController implements GameClientStateListener {
     private JsonDTO.CaseFile selectedCaseFile; // Temporarily store the case for language selection
     private UIMultiplayerSubState currentMultiplayerSubState = UIMultiplayerSubState.NONE;
     private boolean isSinglePlayer;
+    private boolean isHostPlayer;
 
     @FXML
     public void initialize() {
@@ -177,13 +178,13 @@ public class MainController implements GameClientStateListener {
 
         Button startButton = new Button("Start Case");
         startButton.setOnAction(event -> handleStartCase());
-        Button cancelButton = new Button("Cancel");
-        cancelButton.setOnAction(event -> sendCommand("cancel"));
 
-        if (isHost) {
-            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton, cancelButton);
-        } else {
-            invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton, cancelButton);
+        invitationBox.getChildren().addAll(titleLabel, invitationTextArea, startButton);
+
+        if (!isHost) {
+            Button cancelButton = new Button("Cancel");
+            cancelButton.setOnAction(event -> sendCommand("cancel"));
+            invitationBox.getChildren().add(cancelButton);
         }
 
         Platform.runLater(() -> {
@@ -317,9 +318,9 @@ public class MainController implements GameClientStateListener {
                     journalButton.setVisible(false);
                     chatButton.setVisible(false);
                     helpButton.setVisible(false);
-                    exitButton.setVisible(true);
+                    exitButton.setVisible(isHostPlayer); // Only host can exit at this stage
                     rightInfoPanel.setVisible(false);
-                    break;
+                    return; // Return early to prevent view transition logic from running
                 case MENU:
                     nextView = mainMenuVBox;
                     terminalTextArea.clear();
@@ -376,6 +377,7 @@ public class MainController implements GameClientStateListener {
 
     private void startSinglePlayer() {
         isSinglePlayer = true;
+        isHostPlayer = true;
         updateStatus("Starting Single Player...");
         currentState = UIState.CHOOSING_CASE;
         singlePlayerGame = new SinglePlayerMain();
@@ -495,6 +497,7 @@ public class MainController implements GameClientStateListener {
 
     private void startMultiplayer() {
         isSinglePlayer = false;
+        isHostPlayer = false; // Guest by default, updated by server
         updateStatus("Starting Multiplayer Client...");
         String host = getLaunchArg(0, NetworkConstants.DEFAULT_HOST);
         int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);
@@ -964,6 +967,7 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onReceiveCaseInvitation(String invitation, boolean isHost) {
+        this.isHostPlayer = isHost;
         showCaseInvitation(invitation, isHost);
     }
 }

@@ -345,7 +345,7 @@ public class MainController implements GameClientStateListener {
                     helpButton.setVisible(false);
                     exitButton.setVisible(false);
                     rightInfoPanel.setVisible(false);
-                    break;
+                    return; // Return early to prevent view transition logic from running
                 case GAME_SINGLE:
                     nextView = roomView;
                     tasksButton.setVisible(true);

@@ -12,9 +12,6 @@ public class UpdateTaskStateCommand extends BaseCommand {
     private final int taskIndex;
     private final boolean isCompleted;
 
-    // A single constructor for both client-side creation and server-side deserialization.
-    // The @JsonProperty annotations ensure consistent naming ("isCompleted") for both
-    // serialization and deserialization, fixing the root cause of the crash.
     @JsonCreator
     public UpdateTaskStateCommand(
             @JsonProperty("taskIndex") int taskIndex,
@@ -33,7 +30,6 @@ public class UpdateTaskStateCommand extends BaseCommand {
         return taskIndex;
     }
 
-    // This annotation is still useful to ensure serialization also uses the correct name.
     @JsonProperty("isCompleted")
     public boolean isCompleted() {
         return isCompleted;

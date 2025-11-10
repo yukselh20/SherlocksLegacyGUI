@@ -82,7 +82,6 @@ public class GameOutputParser {
     // Check for return to menu
     Matcher returnCaseMatcher = RETURN_TO_CASE_SELECTION_PATTERN.matcher(line);
     if (returnCaseMatcher.find()) {
-      mainController.clearTaskStates();
       mainController.showCaseSelectionMenu();
       return;
     }

@@ -436,6 +436,9 @@ public class MainController implements GameClientStateListener {
 
     public void showCaseSelectionMenu() {
         Platform.runLater(() -> {
+            if (taskStates != null) {
+                taskStates.clear();
+            }
             currentState = UIState.CHOOSING_CASE;
             updateUIVisibility();
             showSinglePlayerCaseSelection();
@@ -444,6 +447,9 @@ public class MainController implements GameClientStateListener {
 
     public void returnToMultiplayerMenu() {
         Platform.runLater(() -> {
+            if (taskStates != null) {
+                taskStates.clear();
+            }
             // This will be called by the parser when the host cancels
             onMainMenu();
         });

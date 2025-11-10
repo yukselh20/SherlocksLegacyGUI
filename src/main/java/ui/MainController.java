@@ -650,6 +650,20 @@ public class MainController implements GameClientStateListener {
         if (journalWindow == null) {
             journalWindow = new JournalWindow(this);
         }
+
+        // Dynamically load journal entries based on the current game context
+        if (isSinglePlayer && singlePlayerGame != null) {
+            List<common.dto.JournalEntryDTO> entries = singlePlayerGame.getGameContext().getJournalEntries(null);
+            if (entries != null) {
+                journalWindow.setEntries(entries);
+            }
+        } else if (!isSinglePlayer && gameClient != null) {
+            List<common.dto.JournalEntryDTO> entries = gameClient.getJournalEntries();
+            if (entries != null) {
+                journalWindow.setEntries(entries);
+            }
+        }
+
         journalWindow.show();
     }
 
@@ -723,6 +737,12 @@ public class MainController implements GameClientStateListener {
                 updateRightPanel(roomDescription);
                 updateStatus("Current room: " + roomDescription.getName());
             });
+        }
+    }
+
+    public void refreshJournalWindow() {
+        if (journalWindow != null) {
+            Platform.runLater(this::openJournalWindow);
         }
     }
 

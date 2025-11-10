@@ -132,6 +132,14 @@ public class JournalWindow {
     updateEntriesList(allEntries);
   }
 
+  public void setEntries(List<common.dto.JournalEntryDTO> entries) {
+    allEntries.clear();
+    for (common.dto.JournalEntryDTO entry : entries) {
+      allEntries.add(entry.toString());
+    }
+    updateEntriesList(allEntries);
+  }
+
   public void show() {
     if (stage != null) {
       stage.show();

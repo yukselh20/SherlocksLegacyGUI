@@ -57,6 +57,7 @@ public class GameClient implements Runnable {
   private List<JsonDTO.CaseFile> availableCasesCache;
   private List<PublicGameInfoDTO> publicGamesCache;
   private List<String> currentTasks;
+  private List<JournalEntryDTO> journalEntries = new ArrayList<>();
   private int currentExamQuestionNumberBeingAnswered = -1;
   private ClientState preWaitingState;
   private boolean intentToHostPublic;
@@ -928,6 +929,7 @@ public class GameClient implements Runnable {
         handleLobbyUpdate((LobbyUpdateDTO) message);
       } else if (message instanceof JournalEntryDTO) {
         printToConsole("[JOURNAL UPDATE] " + message);
+        journalEntries.add((JournalEntryDTO) message);
       } else if (message instanceof ExamQuestionDTO) {
         handleExamQuestion((ExamQuestionDTO) message);
       } else if (message instanceof PlayerNameChangedDTO) {
@@ -1174,6 +1176,10 @@ public class GameClient implements Runnable {
 
     public List<String> getCurrentCaseTasks() {
         return currentTasks;
+    }
+
+    public List<JournalEntryDTO> getJournalEntries() {
+        return journalEntries;
     }
 
     // REPLACE this method

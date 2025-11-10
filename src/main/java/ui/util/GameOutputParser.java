@@ -21,7 +21,7 @@ public class GameOutputParser {
   // Patterns for parsing terminal output
   private static final Pattern ROOM_PATTERN = Pattern.compile("--- Location: (.+?) ---");
   private static final Pattern CHAT_PATTERN = Pattern.compile("\\[CHAT\\] (.+?): (.+)");
-  private static final Pattern JOURNAL_PATTERN = Pattern.compile("\\[JOURNAL UPDATE\\] (.+)");
+  private static final Pattern JOURNAL_PATTERN = Pattern.compile("Journal Contents:");
   private static final Pattern RESPONSE_PATTERN = Pattern.compile("(.+) says: (.+)");
   private static final Pattern RETURN_TO_CASE_SELECTION_PATTERN = Pattern.compile("Returning to case selection\\.");
   private static final Pattern RETURN_TO_MAIN_MENU_PATTERN = Pattern.compile("\\[SERVER\\] Returning to main menu\\.");
@@ -59,8 +59,7 @@ public class GameOutputParser {
     // Check for journal updates
     Matcher journalMatcher = JOURNAL_PATTERN.matcher(line);
     if (journalMatcher.find()) {
-      String entry = journalMatcher.group(1);
-      mainController.addJournalEntry(entry);
+      mainController.refreshJournalWindow();
       return;
     }
 

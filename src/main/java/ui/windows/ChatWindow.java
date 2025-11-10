@@ -127,7 +127,7 @@ public class ChatWindow {
   private String formatMessage(ChatMessage message) {
     LocalTime time = Instant.ofEpochMilli(message.getTimestamp()).atZone(ZoneId.systemDefault()).toLocalTime();
     String timestamp = time.format(TIME_FORMATTER);
-    return "[" + timestamp + "] " + message.getSender() + ": " + message.getMessage();
+    return "[" + timestamp + "] " + message.getSenderDisplayId() + ": " + message.getText();
   }
 
   private void scrollToBottom() {

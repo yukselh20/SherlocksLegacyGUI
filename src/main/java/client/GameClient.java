@@ -930,6 +930,9 @@ public class GameClient implements Runnable {
       } else if (message instanceof JournalEntryDTO) {
         printToConsole("[JOURNAL UPDATE] " + message);
         journalEntries.add((JournalEntryDTO) message);
+        if (listener != null) {
+          listener.onJournalUpdated();
+        }
       } else if (message instanceof ExamQuestionDTO) {
         handleExamQuestion((ExamQuestionDTO) message);
       } else if (message instanceof PlayerNameChangedDTO) {

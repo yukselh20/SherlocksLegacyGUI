@@ -4,6 +4,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -76,6 +78,12 @@ public class JournalWindow {
     noteTextArea.setPrefHeight(80);
     noteTextArea.setWrapText(true);
     noteTextArea.setStyle("-fx-control-inner-background: #0a0a0a; -fx-text-fill: #cccccc; -fx-prompt-text-fill: #666666;");
+    noteTextArea.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+      if (e.getCode() == KeyCode.ENTER && !e.isShiftDown()) {
+        e.consume(); // Consume the event to prevent a newline
+        addNote();
+      }
+    });
     
     Button addNoteButton = new Button("Add Note");
     addNoteButton.setStyle("-fx-background-color: #3a3a3a; -fx-text-fill: #d4af37; -fx-font-weight: bold;");

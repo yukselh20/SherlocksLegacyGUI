@@ -1049,4 +1049,9 @@ public class MainController implements GameClientStateListener {
         this.isHostPlayer = isHost;
         showCaseInvitation(invitation, isHost);
     }
+
+    @Override
+    public void onJournalUpdated() {
+        refreshJournalWindow();
+    }
 }

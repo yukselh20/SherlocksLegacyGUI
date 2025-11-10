@@ -1063,4 +1063,13 @@ public class MainController implements GameClientStateListener {
     public void onJournalUpdated() {
         refreshJournalWindow();
     }
+
+    @Override
+    public void onChatMessageReceived(common.dto.ChatMessage message) {
+        if (chatWindow != null) {
+            Platform.runLater(() -> {
+                chatWindow.addChatMessage(message);
+            });
+        }
+    }
 }

@@ -22,4 +22,5 @@ public interface GameClientStateListener {
   void onUpdateRoom(RoomDescriptionDTO newRoom);
     void onReceiveCaseInvitation(String invitation, boolean isHost);
     void onJournalUpdated();
+    void onChatMessageReceived(common.dto.ChatMessage message);
 }

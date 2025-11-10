@@ -714,6 +714,9 @@ public class GameClient implements Runnable {
   private void handleChatMessage(ChatMessage cm) {
     printToConsole(cm.toString());
     chatHistory.add(cm);
+    if (listener != null) {
+      listener.onChatMessageReceived(cm);
+    }
   }
 
   private void handleRoomDescription(RoomDescriptionDTO rd) {

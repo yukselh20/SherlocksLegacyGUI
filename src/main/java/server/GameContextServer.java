@@ -1344,11 +1344,11 @@ public class GameContextServer implements GameContext, GameActionContext {
     // --- END HOST CHECKS ---
 
     if (command instanceof UpdateTaskStateCommand) {
-        UpdateTaskStateCommand updateCmd = (UpdateTaskStateCommand) command;
-        processUpdateTaskState(
-            updateCmd.getPlayerId(), updateCmd.getTaskIndex(), updateCmd.isCompleted());
+      UpdateTaskStateCommand updateCmd = (UpdateTaskStateCommand) command;
+      processUpdateTaskState(
+              updateCmd.getPlayerId(), updateCmd.getTaskIndex(), updateCmd.isCompleted());
     } else {
-        command.execute(this);
+      command.execute(this);
     }
   }
 

@@ -442,10 +442,6 @@ public class MainController implements GameClientStateListener {
         });
     }
 
-    public void clearTaskStates() {
-        taskStates.clear();
-    }
-
     public void returnToMultiplayerMenu() {
         Platform.runLater(() -> {
             // This will be called by the parser when the host cancels
@@ -842,7 +838,6 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onMainMenu() {
-        taskStates.clear();
         currentMultiplayerSubState = UIMultiplayerSubState.MAIN_MENU;
         currentState = UIState.MULTIPLAYER_MENU;
         updateUIVisibility();

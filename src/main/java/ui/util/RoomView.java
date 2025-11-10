@@ -162,21 +162,24 @@ public class RoomView extends StackPane {
   }
 
   /**
-   * Shows a dialog for asking Dr. Watson a question.
+   * Shows a dialog for asking Dr. Watson for a hint.
    */
   private void showAskWatsonDialog() {
-    TextInputDialog dialog = new TextInputDialog();
+    Alert dialog = new Alert(Alert.AlertType.NONE);
     dialog.setTitle("Ask Dr. Watson");
     dialog.setHeaderText("You can ask Dr. Watson for a hint.");
-    dialog.setContentText("Your question:");
 
-    Optional<String> result = dialog.showAndWait();
-    result.ifPresent(question -> {
-      if (!question.trim().isEmpty()) {
-        mainController.sendCommand("ask watson " + question);
-        showSpeechBubble(suspects.get("Dr. Watson"), "Asking Dr. Watson...");
-      }
-    });
+    ButtonType askWatsonButton = new ButtonType("Ask Watson");
+    ButtonType cancelButton = new ButtonType("Cancel");
+
+    dialog.getButtonTypes().setAll(askWatsonButton, cancelButton);
+
+    Optional<ButtonType> result = dialog.showAndWait();
+
+    if (result.isPresent() && result.get() == askWatsonButton) {
+      mainController.sendCommand("ask watson");
+      showSpeechBubble(suspects.get("Dr. Watson"), "Asking Dr. Watson...");
+    }
   }
 
   /**

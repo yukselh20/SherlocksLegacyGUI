@@ -115,9 +115,11 @@ public class MainController implements GameClientStateListener {
     private UIMultiplayerSubState currentMultiplayerSubState = UIMultiplayerSubState.NONE;
     private boolean isSinglePlayer;
     private boolean isHostPlayer;
+    private java.util.Map<String, Boolean> taskStates;
 
     @FXML
     public void initialize() {
+        this.taskStates = new java.util.HashMap<>();
         terminalTextArea.setEditable(false);
         terminalTextArea.setWrapText(true);
         terminalInputField.setOnAction(event -> handleTerminalInput());
@@ -397,6 +399,7 @@ public class MainController implements GameClientStateListener {
     private void startSinglePlayer() {
         isSinglePlayer = true;
         isHostPlayer = true;
+        taskStates.clear();
         updateStatus("Starting Single Player...");
         currentState = UIState.CHOOSING_CASE;
         singlePlayerGame = new SinglePlayerMain();
@@ -525,6 +528,7 @@ public class MainController implements GameClientStateListener {
     private void startMultiplayer() {
         isSinglePlayer = false;
         isHostPlayer = false; // Guest by default, updated by server
+        taskStates.clear();
         updateStatus("Starting Multiplayer Client...");
         String host = getLaunchArg(0, NetworkConstants.DEFAULT_HOST);
         int port = getLaunchArg(1, NetworkConstants.DEFAULT_PORT);
@@ -626,24 +630,23 @@ public class MainController implements GameClientStateListener {
 
     private void openTasksWindow() {
         if (tasksWindow == null) {
-            tasksWindow = new TasksWindow();
+            tasksWindow = new TasksWindow(this);
         }
 
         // Dynamically load tasks based on the current game context
         if (isSinglePlayer && singlePlayerGame != null) {
             List<String> tasks = singlePlayerGame.getCurrentCaseTasks();
-            if (tasks != null) {
-                tasksWindow.loadTasks(tasks);
-            }
+            tasksWindow.loadTasks(tasks, taskStates);
         } else if (!isSinglePlayer && gameClient != null) {
-            // Assuming GameClient has a method to get tasks
             List<String> tasks = gameClient.getCurrentCaseTasks();
-            if (tasks != null) {
-                tasksWindow.loadTasks(tasks);
-            }
+            tasksWindow.loadTasks(tasks, taskStates);
         }
 
         tasksWindow.show();
+    }
+
+    public void updateTaskState(String task, boolean isCompleted) {
+        taskStates.put(task, isCompleted);
     }
 
     private void openJournalWindow() {

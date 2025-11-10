@@ -17,10 +17,12 @@ public class TasksWindow {
 
   private Stage stage;
   private VBox tasksContainer;
-  private java.util.List<TaskItem> taskItems;
+  private ui.MainController mainController;
+  private java.util.List<String> currentTasks;
 
-  public TasksWindow() {
-    this.taskItems = new java.util.ArrayList<>();
+  public TasksWindow(ui.MainController mainController) {
+    this.mainController = mainController;
+    this.currentTasks = new java.util.ArrayList<>();
     initializeWindow();
   }
 
@@ -75,33 +77,28 @@ public class TasksWindow {
   /**
    * Adds a task to the tasks list.
    */
-  public void addTask(String taskDescription, boolean completed) {
-    TaskItem taskItem = new TaskItem(taskDescription, completed);
-    taskItems.add(taskItem);
-    
-    // Create task UI
+  private void addTask(String taskDescription, boolean completed) {
     HBox taskBox = new HBox(10);
     taskBox.setAlignment(Pos.CENTER_LEFT);
     taskBox.setPadding(new Insets(5));
-    taskBox.setStyle("-fx-background-color: #1a1a1a; -fx-background-radius: 5;");
-    
+
     CheckBox checkBox = new CheckBox();
     checkBox.setSelected(completed);
-    checkBox.setStyle("-fx-text-fill: #cccccc;");
     checkBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
-      taskItem.setCompleted(newVal);
       updateTaskStyle(taskBox, newVal);
+      if (mainController != null) {
+        mainController.updateTaskState(taskDescription, newVal);
+      }
     });
-    
+
     Label taskLabel = new Label(taskDescription);
     taskLabel.setWrapText(true);
     taskLabel.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(taskLabel, javafx.scene.layout.Priority.ALWAYS);
-    taskLabel.setStyle("-fx-text-fill: #cccccc; -fx-font-size: 13;");
-    
+
     taskBox.getChildren().addAll(checkBox, taskLabel);
     updateTaskStyle(taskBox, completed);
-    
+
     tasksContainer.getChildren().add(taskBox);
   }
 
@@ -125,17 +122,26 @@ public class TasksWindow {
    * Clears all tasks.
    */
   public void clearTasks() {
-    taskItems.clear();
     tasksContainer.getChildren().clear();
   }
 
   /**
    * Loads tasks from a list of strings.
    */
-  public void loadTasks(java.util.List<String> tasks) {
+  public void loadTasks(java.util.List<String> tasks, java.util.Map<String, Boolean> taskStates) {
+    if (tasks != null && tasks.equals(this.currentTasks)) {
+      return; // The task list is the same, do not reload.
+    }
+
     clearTasks();
-    for (String task : tasks) {
-      addTask(task, false);
+    this.currentTasks.clear();
+
+    if (tasks != null) {
+      for (String task : tasks) {
+        boolean isCompleted = taskStates.getOrDefault(task, false);
+        addTask(task, isCompleted);
+      }
+      this.currentTasks.addAll(tasks);
     }
   }
 
@@ -158,28 +164,4 @@ public class TasksWindow {
     }
   }
 
-  /**
-   * Inner class to represent a task item.
-   */
-  private static class TaskItem {
-    private String description;
-    private boolean completed;
-
-    public TaskItem(String description, boolean completed) {
-      this.description = description;
-      this.completed = completed;
-    }
-
-    public String getDescription() {
-      return description;
-    }
-
-    public boolean isCompleted() {
-      return completed;
-    }
-
-    public void setCompleted(boolean completed) {
-      this.completed = completed;
-    }
-  }
 }

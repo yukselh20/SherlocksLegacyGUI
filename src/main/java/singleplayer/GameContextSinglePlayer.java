@@ -367,6 +367,7 @@ public void handlePlayerCancelLobby(String playerId) {
     }
     if (this.journal.addEntry(entry)) {
       logContextMessage("Journal entry added by " + entry.getContributorPlayerId() + ". Journal size now: " + this.journal.getEntryCount());
+      sendResponseToPlayer(entry.getContributorPlayerId(), entry);
     } else {
       logContextMessage("Journal entry by " + entry.getContributorPlayerId() + " was considered a duplicate, not added. Journal size: " + this.journal.getEntryCount());
     }
@@ -401,7 +402,7 @@ public void handlePlayerCancelLobby(String playerId) {
       }
       output = sb.toString();
     } else if (responseDto instanceof JournalEntryDTO) {
-      output = "Journal: " + responseDto;
+      output = "[JOURNAL UPDATE] " + responseDto;
     } else if (responseDto instanceof ExamQuestionDTO) {
       output = "\n--- EXAM QUESTION " + ((ExamQuestionDTO) responseDto).getQuestionNumber() + " ---\n" +
               ((ExamQuestionDTO) responseDto).getQuestionText() + "\nEnter your answer:";

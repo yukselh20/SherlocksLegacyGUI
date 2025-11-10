@@ -31,8 +31,6 @@ public class JournalAddCommand extends BaseCommand {
     JournalEntryDTO newEntry = new JournalEntryDTO(this.note, getPlayerId(), System.currentTimeMillis());
     context.addJournalEntry(newEntry);
 
-    // Send the new entry directly to the client to trigger UI updates
-    context.sendResponseToPlayer(getPlayerId(), newEntry);
 
     // Send a simple confirmation message to the terminal
     TextMessage confirmation = new TextMessage("Note added to journal.", false);

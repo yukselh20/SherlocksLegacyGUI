@@ -906,7 +906,10 @@ public class GameClient implements Runnable {
       this.intentToHostPublic = true;
       this.currentExamQuestionNumberBeingAnswered = -1;
       currentState.set(ClientState.CONNECTED_IDLE);
-      log("Received ReturnToLobbyDTO. Client state set to CONNECTED_IDLE.");
+      if (listener != null) {
+        listener.onMainMenu();
+      }
+      log("Received ReturnToLobbyDTO. Client state set to CONNECTED_IDLE and onMainMenu called.");
     } finally {
       consoleLock.unlock();
     }

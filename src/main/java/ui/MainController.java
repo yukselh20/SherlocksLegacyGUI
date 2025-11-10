@@ -447,9 +447,6 @@ public class MainController implements GameClientStateListener {
 
     public void returnToMultiplayerMenu() {
         Platform.runLater(() -> {
-            if (taskStates != null) {
-                taskStates.clear();
-            }
             // This will be called by the parser when the host cancels
             onMainMenu();
         });
@@ -844,6 +841,9 @@ public class MainController implements GameClientStateListener {
 
     @Override
     public void onMainMenu() {
+        if (taskStates != null) {
+            taskStates.clear();
+        }
         currentMultiplayerSubState = UIMultiplayerSubState.MAIN_MENU;
         currentState = UIState.MULTIPLAYER_MENU;
         updateUIVisibility();

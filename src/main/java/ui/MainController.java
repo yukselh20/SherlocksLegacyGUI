@@ -27,6 +27,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
+import common.commands.UpdateTaskStateCommand;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import server.ServerMain;
@@ -646,7 +647,23 @@ public class MainController implements GameClientStateListener {
     }
 
     public void updateTaskState(String task, boolean isCompleted) {
-        taskStates.put(task, isCompleted);
+        if (isSinglePlayer) {
+            // For single player, we just update the local map directly.
+            taskStates.put(task, isCompleted);
+        } else if (gameClient != null) {
+            // For multiplayer, we need to find the task index and send a command.
+            List<String> tasks = gameClient.getCurrentCaseTasks();
+            if (tasks != null) {
+                int taskIndex = tasks.indexOf(task);
+                if (taskIndex != -1) {
+                    // Note: We are NOT updating the local map here directly.
+                    // The UI will only update when the server broadcasts the change back to us,
+                    // ensuring a single source of truth and synchronization.
+                    UpdateTaskStateCommand command = new UpdateTaskStateCommand(taskIndex, isCompleted);
+                    gameClient.sendDirectCommand(command);
+                }
+            }
+        }
     }
 
     private void openJournalWindow() {
@@ -1074,5 +1091,27 @@ public class MainController implements GameClientStateListener {
                 chatWindow.addChatMessage(message);
             });
         }
+    }
+
+    @Override
+    public void onTaskStateUpdate(int taskIndex, boolean isCompleted) {
+        // This is a multiplayer-only feature, as single player state is local.
+        if (isSinglePlayer || gameClient == null) {
+            return;
+        }
+
+        Platform.runLater(() -> {
+            List<String> tasks = gameClient.getCurrentCaseTasks();
+
+            if (tasks != null && taskIndex >= 0 && taskIndex < tasks.size()) {
+                String task = tasks.get(taskIndex);
+                this.taskStates.put(task, isCompleted); // Update the local state map
+
+                // If the tasks window is open, refresh its view to reflect the change
+                if (tasksWindow != null && tasksWindow.isShowing()) {
+                    tasksWindow.loadTasks(tasks, this.taskStates);
+                }
+            }
+        });
     }
 }

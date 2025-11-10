@@ -23,4 +23,5 @@ public interface GameClientStateListener {
     void onReceiveCaseInvitation(String invitation, boolean isHost);
     void onJournalUpdated();
     void onChatMessageReceived(common.dto.ChatMessage message);
+    void onTaskStateUpdate(int taskIndex, boolean isCompleted);
 }

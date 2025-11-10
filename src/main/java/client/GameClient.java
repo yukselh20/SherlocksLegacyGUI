@@ -945,6 +945,8 @@ public class GameClient implements Runnable {
         handleExamResult((ExamResultDTO) message);
       } else if (message instanceof ReturnToLobbyDTO) {
         handleReturnToLobby((ReturnToLobbyDTO) message);
+      } else if (message instanceof TaskStateUpdateDTO) {
+        handleTaskStateUpdate((TaskStateUpdateDTO) message);
       } else if (message instanceof NpcMovedDTO) {
         handleNpcMoved((NpcMovedDTO) message);
       } else if (message instanceof ClientIdAssignmentDTO idDto) {
@@ -968,6 +970,12 @@ public class GameClient implements Runnable {
     if (pnc.getPlayerId().equals(this.playerId)) {
       this.playerDisplayId = pnc.getNewDisplayName();
       log("My display name confirmed/updated by server to: " + this.playerDisplayId);
+    }
+  }
+
+  private void handleTaskStateUpdate(TaskStateUpdateDTO ts) {
+    if (listener != null) {
+      listener.onTaskStateUpdate(ts.getTaskIndex(), ts.isCompleted());
     }
   }
 
@@ -1191,6 +1199,13 @@ public class GameClient implements Runnable {
 
     public List<ChatMessage> getChatHistory() {
         return chatHistory;
+    }
+
+    public void sendDirectCommand(Command command) {
+        if (command != null) {
+            log("Sending direct command from GUI: " + command.getClass().getSimpleName());
+            sendToServer(command);
+        }
     }
 
     // REPLACE this method

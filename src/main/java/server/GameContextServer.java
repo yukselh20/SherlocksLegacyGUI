@@ -6,6 +6,7 @@ import JsonDTO.CaseFile;
 import common.commands.Command;
 import common.commands.InitiateFinalExamCommand;
 import common.commands.StartCaseCommand;
+import common.commands.UpdateTaskStateCommand;
 import common.dto.*;
 import common.interfaces.GameActionContext;
 import common.interfaces.GameContext;
@@ -47,6 +48,9 @@ public class GameContextServer implements GameContext, GameActionContext {
   private int currentExamQuestionIndex;
   private final CaseData selectedCase;
 
+  // Shared task state for the session
+  private Map<Integer, Boolean> taskStates; // <task index, isCompleted>
+
 
 
   public GameContextServer(
@@ -62,6 +66,7 @@ public class GameContextServer implements GameContext, GameActionContext {
 
     if (p1Id != null) this.player1Detective = new Detective(p1Id);
     if (p2Id != null) this.player2Detective = new Detective(p2Id);
+    this.taskStates = new HashMap<>();
   }
 
   // Called by GameSession when P2 joins or if context needs re-init with both players
@@ -1338,8 +1343,39 @@ public class GameContextServer implements GameContext, GameActionContext {
     }
     // --- END HOST CHECKS ---
 
-    command.execute(this); // 'this' is the GameActionContext for the command's logic
+    if (command instanceof UpdateTaskStateCommand) {
+        command.execute(this);
+    } else {
+        command.execute(this);
+    }
   }
+
+  public void processUpdateTaskState(String playerId, int taskIndex, boolean isCompleted) {
+    // Optional: Add validation to ensure taskIndex is valid for the current case
+    if (taskList != null && taskIndex >= 0 && taskIndex < taskList.getTasks().size()) {
+        // Update the server's state
+        taskStates.put(taskIndex, isCompleted);
+        logGameMessage(
+                "Player "
+                        + playerId
+                        + " updated task "
+                        + taskIndex
+                        + " to state: "
+                        + (isCompleted ? "Completed" : "Incomplete"));
+
+        // Broadcast the change to ALL clients in the session, including the sender for sync
+        TaskStateUpdateDTO updateDTO = new TaskStateUpdateDTO(taskIndex, isCompleted);
+        broadcastToSession(updateDTO, null);
+
+    } else {
+        logGameMessage(
+                "Warning: Player "
+                        + playerId
+                        + " sent an invalid task index to update: "
+                        + taskIndex);
+    }
+  }
+
 
   @Override
   public int getSessionDeduceCount() {

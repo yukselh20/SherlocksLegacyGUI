@@ -129,10 +129,6 @@ public class TasksWindow {
    * Loads tasks from a list of strings.
    */
   public void loadTasks(java.util.List<String> tasks, java.util.Map<String, Boolean> taskStates) {
-    if (tasks != null && tasks.equals(this.currentTasks)) {
-      return; // The task list is the same, do not reload.
-    }
-
     clearTasks();
     this.currentTasks.clear();
 
@@ -164,4 +160,7 @@ public class TasksWindow {
     }
   }
 
+  public boolean isShowing() {
+    return stage != null && stage.isShowing();
+  }
 }

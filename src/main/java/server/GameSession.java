@@ -228,8 +228,12 @@ public class GameSession {
       command.setPlayerId(playerId);
       boolean commandAllowed = false;
       if (this.state == GameSessionState.ACTIVE) {
-        commandAllowed = true;
-      } else if (this.state == GameSessionState.WAITING_FOR_PLAYERS || this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
+            if (command instanceof common.commands.UpdateTaskStateCommand) {
+                commandAllowed = true;
+            } else {
+                commandAllowed = true;
+            }
+        } else if (this.state == GameSessionState.WAITING_FOR_PLAYERS || this.state == GameSessionState.IN_LOBBY_AWAITING_START) {
         // Whitelist of commands allowed in any lobby state
         if (command instanceof common.commands.StartCaseCommand
                 || command instanceof common.commands.RequestStartCaseCommand

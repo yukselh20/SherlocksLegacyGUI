@@ -1348,9 +1348,11 @@ public class GameContextServer implements GameContext, GameActionContext {
 
   @Override
   public void processUpdateTaskState(String playerId, int taskIndex, boolean isCompleted) {
-    // Optional: Add validation to ensure taskIndex is valid for the current case
-    if (taskList != null && taskIndex >= 0 && taskIndex < taskList.getTasks().size()) {
-        // Update the server's state
+    try {
+      if (taskList == null) {
+        throw new IllegalStateException("Task list has not been initialized for the current case.");
+      }
+      if (taskIndex >= 0 && taskIndex < taskList.getTasks().size()) {
         taskStates.put(taskIndex, isCompleted);
         logGameMessage(
                 "Player "
@@ -1360,16 +1362,23 @@ public class GameContextServer implements GameContext, GameActionContext {
                         + " to state: "
                         + (isCompleted ? "Completed" : "Incomplete"));
 
-        // Broadcast the change to ALL clients in the session, including the sender for sync
         TaskStateUpdateDTO updateDTO = new TaskStateUpdateDTO(taskIndex, isCompleted);
         broadcastToSession(updateDTO, null);
+      } else {
+        throw new IllegalArgumentException("Invalid task index provided: " + taskIndex);
+      }
+    } catch (Exception e) {
+      logGameMessage(
+              "Error processing task state update for player "
+                      + playerId
+                      + " (taskIndex: "
+                      + taskIndex
+                      + "): "
+                      + e.getMessage());
 
-    } else {
-        logGameMessage(
-                "Warning: Player "
-                        + playerId
-                        + " sent an invalid task index to update: "
-                        + taskIndex);
+      sendResponseToPlayer(
+              playerId,
+              new TextMessage("Error updating task: " + e.getMessage(), true));
     }
   }
 

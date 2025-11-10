@@ -24,7 +24,7 @@ public class TaskStateUpdateDTO implements Serializable {
         return taskIndex;
     }
 
-    public boolean isCompleted() {
+    public boolean getIsCompleted() {
         return isCompleted;
     }
 }

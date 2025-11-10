@@ -975,7 +975,7 @@ public class GameClient implements Runnable {
 
   private void handleTaskStateUpdate(TaskStateUpdateDTO ts) {
     if (listener != null) {
-      listener.onTaskStateUpdate(ts.getTaskIndex(), ts.isCompleted());
+      listener.onTaskStateUpdate(ts.getTaskIndex(), ts.getIsCompleted());
     }
   }
 

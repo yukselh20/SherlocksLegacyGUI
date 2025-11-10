@@ -66,7 +66,6 @@ public class GameContextServer implements GameContext, GameActionContext {
 
     if (p1Id != null) this.player1Detective = new Detective(p1Id);
     if (p2Id != null) this.player2Detective = new Detective(p2Id);
-    this.taskStates = new HashMap<>();
   }
 
   // Called by GameSession when P2 joins or if context needs re-init with both players
@@ -122,6 +121,7 @@ public class GameContextServer implements GameContext, GameActionContext {
     this.currentExamQuestionsList = null;
     this.player1ExamAnswersMap = null;
     this.currentExamQuestionIndex = 0;
+    this.taskStates = new HashMap<>();
 
     if (selectedCase.getTasks() != null) {
       this.taskList = new TaskList(new ArrayList<>(selectedCase.getTasks()));

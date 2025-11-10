@@ -30,6 +30,7 @@ public class UpdateTaskStateCommand extends BaseCommand {
         return taskIndex;
     }
 
+    @JsonProperty("isCompleted")
     public boolean isCompleted() {
         return isCompleted;
     }

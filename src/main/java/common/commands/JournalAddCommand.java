@@ -30,6 +30,11 @@ public class JournalAddCommand extends BaseCommand {
   protected void executeCommandLogic(GameActionContext context) {
     JournalEntryDTO newEntry = new JournalEntryDTO(this.note, getPlayerId(), System.currentTimeMillis());
     context.addJournalEntry(newEntry);
+
+    // After adding, immediately display the journal to trigger UI refresh
+    JournalCommand displayCommand = new JournalCommand(null); // No keyword, so it lists all entries
+    displayCommand.setPlayerId(getPlayerId());
+    displayCommand.execute(context);
   }
 
   @Override

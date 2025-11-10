@@ -58,6 +58,7 @@ public class GameClient implements Runnable {
   private List<PublicGameInfoDTO> publicGamesCache;
   private List<String> currentTasks;
   private List<JournalEntryDTO> journalEntries = new ArrayList<>();
+  private List<ChatMessage> chatHistory = new ArrayList<>();
   private int currentExamQuestionNumberBeingAnswered = -1;
   private ClientState preWaitingState;
   private boolean intentToHostPublic;
@@ -712,6 +713,7 @@ public class GameClient implements Runnable {
 
   private void handleChatMessage(ChatMessage cm) {
     printToConsole(cm.toString());
+    chatHistory.add(cm);
   }
 
   private void handleRoomDescription(RoomDescriptionDTO rd) {
@@ -1183,6 +1185,10 @@ public class GameClient implements Runnable {
 
     public List<JournalEntryDTO> getJournalEntries() {
         return journalEntries;
+    }
+
+    public List<ChatMessage> getChatHistory() {
+        return chatHistory;
     }
 
     // REPLACE this method

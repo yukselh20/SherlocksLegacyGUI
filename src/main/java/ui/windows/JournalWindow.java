@@ -111,10 +111,17 @@ public class JournalWindow {
   }
 
   private void performSearch() {
-    String keyword = searchField.getText().trim();
-    if (mainController != null) {
-      mainController.sendCommand("journal " + keyword);
+    String keyword = searchField.getText().trim().toLowerCase();
+    if (keyword.isEmpty()) {
+      updateEntriesList(allEntries);
+      return;
     }
+
+    List<String> filteredEntries = allEntries.stream()
+            .filter(entry -> entry.toLowerCase().contains(keyword))
+            .collect(Collectors.toList());
+
+    updateEntriesList(filteredEntries);
   }
 
   private void addNote() {

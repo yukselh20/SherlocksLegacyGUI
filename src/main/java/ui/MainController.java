@@ -671,6 +671,15 @@ public class MainController implements GameClientStateListener {
         if (chatWindow == null) {
             chatWindow = new ChatWindow(this);
         }
+
+        // Dynamically load chat history
+        if (!isSinglePlayer && gameClient != null) {
+            List<common.dto.ChatMessage> history = gameClient.getChatHistory();
+            if (history != null) {
+                chatWindow.loadHistory(history);
+            }
+        }
+
         chatWindow.show();
         unreadChatCount = 0;
         updateUnreadChatLabel();

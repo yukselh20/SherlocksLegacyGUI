@@ -10,8 +10,12 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import ui.MainController;
 
+import common.dto.ChatMessage;
+import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Chat window for the Detective Game multiplayer mode.
@@ -46,8 +50,6 @@ public class ChatWindow {
     chatListView = new ListView<>();
     chatListView.setStyle("-fx-background-color: #0a0a0a; -fx-control-inner-background: #0a0a0a;");
     chatListView.setPrefHeight(400);
-    
-    addChatMessage("[SYSTEM]", "Welcome to the chat!");
     
     centerBox.getChildren().addAll(chatLabel, chatListView);
     VBox.setVgrow(chatListView, javafx.scene.layout.Priority.ALWAYS);
@@ -99,14 +101,33 @@ public class ChatWindow {
   }
 
   public void addChatMessage(String sender, String message) {
-    String timestamp = LocalTime.now().format(TIME_FORMATTER);
-    String formattedMessage = "[" + timestamp + "] " + sender + ": " + message;
+    long timestampMillis = System.currentTimeMillis();
+    ChatMessage chatMessage = new ChatMessage(sender, message, timestampMillis);
+    addChatMessage(chatMessage);
+  }
+
+  public void addChatMessage(ChatMessage chatMessage) {
+    String formattedMessage = formatMessage(chatMessage);
     chatListView.getItems().add(formattedMessage);
     scrollToBottom();
-    
+
     if (!stage.isShowing() && mainController != null) {
       mainController.incrementUnreadChat();
     }
+  }
+
+  public void loadHistory(List<ChatMessage> history) {
+    chatListView.getItems().clear();
+    for (ChatMessage message : history) {
+      chatListView.getItems().add(formatMessage(message));
+    }
+    scrollToBottom();
+  }
+
+  private String formatMessage(ChatMessage message) {
+    LocalTime time = Instant.ofEpochMilli(message.getTimestamp()).atZone(ZoneId.systemDefault()).toLocalTime();
+    String timestamp = time.format(TIME_FORMATTER);
+    return "[" + timestamp + "] " + message.getSender() + ": " + message.getMessage();
   }
 
   private void scrollToBottom() {

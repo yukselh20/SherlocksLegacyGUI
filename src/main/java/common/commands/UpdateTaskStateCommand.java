@@ -12,25 +12,16 @@ public class UpdateTaskStateCommand extends BaseCommand {
     private final int taskIndex;
     private final boolean isCompleted;
 
-    // This is the primary constructor for internal use and for serialization
-    public UpdateTaskStateCommand(int taskIndex, boolean isCompleted) {
-        super(false);
+    // A single constructor for both client-side creation and server-side deserialization.
+    // The @JsonProperty annotations ensure consistent naming ("isCompleted") for both
+    // serialization and deserialization, fixing the root cause of the crash.
+    @JsonCreator
+    public UpdateTaskStateCommand(
+            @JsonProperty("taskIndex") int taskIndex,
+            @JsonProperty("isCompleted") boolean isCompleted) {
+        super(false); // Command is not available before game starts
         this.taskIndex = taskIndex;
         this.isCompleted = isCompleted;
-    }
-
-    // This secondary constructor is for Jackson deserialization ONLY.
-    // It accepts both "isCompleted" (the correct, new format) and "completed" (the old/buggy format)
-    // to prevent server crashes if an older client sends a misnamed property.
-    @JsonCreator
-    public static UpdateTaskStateCommand fromJson(
-        @JsonProperty("taskIndex") int taskIndex,
-        @JsonProperty("isCompleted") Boolean isCompleted,
-        @JsonProperty("completed") Boolean completed) {
-        // Prioritize the correct "isCompleted" field, but fall back to "completed".
-        // If neither is present, default to false.
-        boolean finalCompleted = (isCompleted != null) ? isCompleted : (completed != null ? completed : false);
-        return new UpdateTaskStateCommand(taskIndex, finalCompleted);
     }
 
     @Override
@@ -42,6 +33,7 @@ public class UpdateTaskStateCommand extends BaseCommand {
         return taskIndex;
     }
 
+    // This annotation is still useful to ensure serialization also uses the correct name.
     @JsonProperty("isCompleted")
     public boolean isCompleted() {
         return isCompleted;

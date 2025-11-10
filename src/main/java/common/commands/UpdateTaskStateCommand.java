@@ -23,14 +23,15 @@ public class UpdateTaskStateCommand extends BaseCommand {
 
     @Override
     protected void executeCommandLogic(GameActionContext context) {
-        // This command is handled specially in GameContextServer and does not use this logic.
+    context.processUpdateTaskState(getPlayerId(), this.taskIndex, this.isCompleted);
     }
 
     public int getTaskIndex() {
         return taskIndex;
     }
 
-    public boolean getIsCompleted() {
+@JsonProperty("isCompleted")
+public boolean isCompleted() {
         return isCompleted;
     }
 

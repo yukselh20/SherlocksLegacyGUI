@@ -57,6 +57,8 @@ public interface GameActionContext {
   WatsonHintResponseDTO askWatsonForHint(String playerId);
   void handlePlayerCancelLobby(String playerId);
 
+  void processUpdateTaskState(String playerId, int taskIndex, boolean isCompleted);
+
 
     // --- ADD THESE TWO METHODS ---
     /**

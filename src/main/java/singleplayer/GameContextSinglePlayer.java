@@ -51,12 +51,14 @@ public class GameContextSinglePlayer implements GameContext, GameActionContext {
   private int currentQuestionIndex;
   private boolean isExamActive;
   private CaseData selectedCase;
+  private Map<Integer, Boolean> taskStates;
 
   public GameContextSinglePlayer() {
     this.detective = new Detective("PlayerDetectiveSP");
     this.rooms = new HashMap<>();
     this.suspects = new ArrayList<>();
     this.journal = new Journal<>();
+    this.taskStates = new HashMap<>();
     resetExamState();
   }
 
@@ -65,6 +67,7 @@ public class GameContextSinglePlayer implements GameContext, GameActionContext {
     this.rooms.clear();
     this.suspects.clear();
     this.journal.clearEntries();
+    this.taskStates.clear();
     this.taskList = null;
     this.selectedCase = null;
     this.currentRoom = null;
@@ -665,5 +668,17 @@ private void evaluateAndSendExamResults(String playerId) {
       // which is the single source of truth for SP. This method does nothing.
   }
 
-
+  @Override
+  public void processUpdateTaskState(String playerId, int taskIndex, boolean isCompleted) {
+    if (taskList != null && taskIndex >= 0 && taskIndex < taskList.getTasks().size()) {
+      taskStates.put(taskIndex, isCompleted);
+      logContextMessage(
+          "Task " + taskIndex + " state updated to: " + (isCompleted ? "Completed" : "Incomplete"));
+      // In SP, the UI state is managed centrally, so we don't need to broadcast.
+      // A confirmation message isn't necessary as the UI change is immediate.
+    } else {
+      logContextMessage(
+          "Warning: Invalid task index received for update: " + taskIndex);
+    }
+  }
 }

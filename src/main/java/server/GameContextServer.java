@@ -1343,15 +1343,10 @@ public class GameContextServer implements GameContext, GameActionContext {
     }
     // --- END HOST CHECKS ---
 
-    if (command instanceof UpdateTaskStateCommand) {
-        UpdateTaskStateCommand updateCmd = (UpdateTaskStateCommand) command;
-        processUpdateTaskState(
-            updateCmd.getPlayerId(), updateCmd.getTaskIndex(), updateCmd.getIsCompleted());
-    } else {
-        command.execute(this);
-    }
+    command.execute(this);
   }
 
+  @Override
   public void processUpdateTaskState(String playerId, int taskIndex, boolean isCompleted) {
     // Optional: Add validation to ensure taskIndex is valid for the current case
     if (taskList != null && taskIndex >= 0 && taskIndex < taskList.getTasks().size()) {

@@ -409,7 +409,7 @@ public class MainController implements GameClientStateListener {
         showSinglePlayerCaseSelection();
     }
 
-    private void showSinglePlayerCaseSelection() {
+    public void showSinglePlayerCaseSelection() {
         List<JsonDTO.CaseFile> cases = singlePlayerGame.getAvailableCases();
         VBox caseSelectionBox = new VBox(15);
         caseSelectionBox.setAlignment(Pos.CENTER);
@@ -431,7 +431,13 @@ public class MainController implements GameClientStateListener {
             currentState = UIState.MENU;
             updateUIVisibility();
         });
-        caseSelectionBox.getChildren().add(backButton);
+
+        Button addCaseButton = new Button("Add New Case");
+        addCaseButton.setOnAction(event -> {
+            new ui.windows.AddCaseWindow(this).show();
+        });
+
+        caseSelectionBox.getChildren().addAll(addCaseButton, backButton);
         roomPane.getChildren().clear();
         roomPane.getChildren().add(caseSelectionBox);
     }

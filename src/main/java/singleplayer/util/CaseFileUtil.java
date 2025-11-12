@@ -1,135 +1,80 @@
 package singleplayer.util;
 
-import JsonDTO.CaseFile;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import singleplayer.SinglePlayerMain;
 
 public class CaseFileUtil {
 
-  private CaseFileUtil() {}
-
-  public static void addCaseFromFile(String filePath) {
-    ObjectMapper mapper = new ObjectMapper();
-
-    try {
-      File sourceFile = new File(filePath);
-      if (!sourceFile.exists()) {
-        System.out.println("ADD_CASE_ERROR: Source file not found: " + filePath);
-        return;
-      }
-      if (!sourceFile.isFile()) {
-        System.out.println("ADD_CASE_ERROR: Source path is not a regular file: " + filePath);
-        return;
-      }
-      if (!filePath.toLowerCase().endsWith(".json")) {
-        System.out.println("ADD_CASE_ERROR: Source file must be a .json file.");
-        return;
-      }
-
-      CaseFile newCaseContent;
-      try {
-        newCaseContent = mapper.readValue(sourceFile, CaseFile.class);
-      } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-        System.out.println("ADD_CASE_ERROR: Could not parse the JSON in '" + sourceFile.getName() + "'. Ensure it's valid JSON.");
-        return;
-      }
-
-      // MODIFIED: Use getUniversalTitle() for validation
-      if (newCaseContent.getUniversalTitle() == null || newCaseContent.getUniversalTitle().trim().isEmpty()) {
-        System.out.println("ADD_CASE_ERROR: The case file '" + sourceFile.getName() + "' is missing a valid universal_title.");
-        return;
-      }
-
-      // MODIFIED: Use getUniversalTitle() for duplicate checking
-      List<CaseFile> existingCases = loadExistingCasesFromCasesDir();
-      for (CaseFile existingCase : existingCases) {
-        if (existingCase.getUniversalTitle().equalsIgnoreCase(newCaseContent.getUniversalTitle())) {
-          System.out.println(
-                  "ADD_CASE_ERROR: A case titled '"
-                          + newCaseContent.getUniversalTitle()
-                          + "' already exists in the '"
-                          + SinglePlayerMain.CASES_DIRECTORY
-                          + "' directory.");
-          return;
+    /**
+     * Gets a list of available case files from the external cases directory.
+     *
+     * @return A list of File objects, or an empty list if the directory doesn't exist.
+     */
+    public static List<File> getAvailableCaseFiles() {
+        Path externalCasesDir = Paths.get(SinglePlayerMain.CASES_DIRECTORY);
+        if (!Files.isDirectory(externalCasesDir)) {
+            return Collections.emptyList();
         }
-      }
 
-      File targetCasesFolder = new File(SinglePlayerMain.CASES_DIRECTORY);
-      if (!targetCasesFolder.exists()) {
-        if (!targetCasesFolder.mkdirs()) {
-          System.out.println("ADD_CASE_ERROR: Could not create target 'cases' directory at: " + targetCasesFolder.getAbsolutePath());
-          return;
+        try (Stream<Path> stream = Files.list(externalCasesDir)) {
+            return stream
+                    .filter(path -> !Files.isDirectory(path) && path.toString().toLowerCase().endsWith(".json"))
+                    .map(Path::toFile)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            System.err.println("Error reading case files: " + e.getMessage());
+            return Collections.emptyList();
         }
-        System.out.println("ADD_CASE_INFO: Created 'cases' directory: " + targetCasesFolder.getAbsolutePath());
-      }
-      if (!targetCasesFolder.isDirectory()) {
-        System.out.println("ADD_CASE_ERROR: Target path '" + targetCasesFolder.getAbsolutePath() + "' is not a directory.");
-        return;
-      }
-
-      String originalFileName = sourceFile.getName();
-      File destinationFile = new File(targetCasesFolder, originalFileName);
-      int counter = 1;
-      while (destinationFile.exists()) {
-        String namePart = originalFileName.substring(0, originalFileName.lastIndexOf('.'));
-        String extPart = originalFileName.substring(originalFileName.lastIndexOf('.'));
-        String newFileName = namePart + "_" + counter + extPart;
-        destinationFile = new File(targetCasesFolder, newFileName);
-        counter++;
-      }
-
-      Files.copy(sourceFile.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-      // MODIFIED: Use getUniversalTitle() in the success message
-      System.out.println("ADD_CASE_SUCCESS: Case '" + newCaseContent.getUniversalTitle() + "' added.");
-      System.out.println(
-              "                  Saved as: "
-                      + destinationFile.getName()
-                      + " in '"
-                      + targetCasesFolder.getName()
-                      + "' directory.");
-
-    } catch (IOException e) {
-      System.out.println("ADD_CASE_IO_ERROR: An error occurred during file operation: " + e.getMessage());
-    } catch (Exception e) {
-      System.out.println("ADD_CASE_UNEXPECTED_ERROR: An unexpected error occurred: " + e.getMessage());
-      e.printStackTrace();
     }
-  }
 
-  private static List<CaseFile> loadExistingCasesFromCasesDir() {
-    ObjectMapper mapper = new ObjectMapper();
-    File folder = new File(SinglePlayerMain.CASES_DIRECTORY);
-    List<CaseFile> cases = new ArrayList<>();
+    /**
+     * Adds a new case file from a given path to the application's cases directory.
+     *
+     * @param sourcePathStr The full path to the source .json file.
+     * @return A status message indicating success or failure.
+     */
+    public static String addCaseFile(String sourcePathStr) {
+        Path sourcePath = Paths.get(sourcePathStr);
 
-    if (folder.exists() && folder.isDirectory()) {
-      File[] files = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
-      if (files != null) {
-        for (File file : files) {
-          try {
-            CaseFile caseFile = mapper.readValue(file, CaseFile.class);
-            // MODIFIED: Use getUniversalTitle() to validate if a case is usable
-            if (caseFile.getUniversalTitle() != null && !caseFile.getUniversalTitle().trim().isEmpty()) {
-              cases.add(caseFile);
-            } else {
-              System.out.println("LOAD_CASES_WARN: Skipping case file '" + file.getName() + "' (missing universal_title).");
-            }
-          } catch (Exception e) {
-            System.out.println(
-                    "LOAD_CASES_ERROR: Error parsing existing case file '"
-                            + file.getName()
-                            + "': "
-                            + e.getMessage());
-          }
+        // 1. Validate source file
+        if (!Files.exists(sourcePath)) {
+            return "Error: Source file does not exist at '" + sourcePathStr + "'.";
         }
-      }
+        if (Files.isDirectory(sourcePath)) {
+            return "Error: The provided path is a directory, not a file.";
+        }
+        if (!sourcePathStr.toLowerCase().endsWith(".json")) {
+            return "Error: The file must be a .json file.";
+        }
+
+        // 2. Prepare destination directory
+        Path destDir = Paths.get(SinglePlayerMain.CASES_DIRECTORY);
+        try {
+            Files.createDirectories(destDir);
+        } catch (IOException e) {
+            return "Error: Could not create cases directory: " + e.getMessage();
+        }
+
+        // 3. Copy the file
+        Path destPath = destDir.resolve(sourcePath.getFileName());
+        if (Files.exists(destPath)) {
+            return "Warning: A case with the name '" + sourcePath.getFileName() + "' already exists. File not copied.";
+        }
+
+        try {
+            Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
+            return "Success: Case '" + sourcePath.getFileName() + "' added successfully.";
+        } catch (IOException e) {
+            return "Error: Failed to copy file: " + e.getMessage();
+        }
     }
-    return cases;
-  }
 }

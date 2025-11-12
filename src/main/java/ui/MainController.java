@@ -130,7 +130,7 @@ public class MainController implements GameClientStateListener {
 
         // Add a listener to auto-scroll the terminal to the bottom on new text
         terminalTextArea.textProperty().addListener((observable, oldValue, newValue) -> {
-            terminalTextArea.setScrollTop(Double.MAX_VALUE);
+            Platform.runLater(() -> terminalTextArea.setScrollTop(Double.MAX_VALUE));
         });
 
         terminalInputField.setOnAction(event -> handleTerminalInput());

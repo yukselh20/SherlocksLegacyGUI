@@ -65,6 +65,11 @@ public class TextAreaOutputStream extends OutputStream {
       // Update UI on JavaFX Application Thread
       Platform.runLater(() -> {
         textArea.appendText(text);
+        // By nesting Platform.runLater, we schedule the scroll to happen
+        // on a subsequent pulse of the JavaFX application thread. This gives
+        // the layout-engine time to recalculate the view bounds after a text change,
+        // ensuring the scroll goes to the correct final position.
+        Platform.runLater(() -> textArea.setScrollTop(Double.MAX_VALUE));
       });
     }
   }

@@ -657,6 +657,10 @@ public class MainController implements GameClientStateListener {
                 updateUIVisibility(); // To reprint the main menu
             } else if (currentState == UIState.CASE_INVITATION && !isSinglePlayer) {
                 gameClient.enqueueUserInput(input);
+            } else if (currentState == UIState.CASE_INVITATION && isSinglePlayer) {
+                if (input.equalsIgnoreCase("start case")) {
+                    handleStartCase();
+                }
             }
             terminalInputField.clear();
         }

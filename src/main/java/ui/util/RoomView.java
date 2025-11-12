@@ -68,7 +68,7 @@ public class RoomView extends StackPane {
    */
   public void loadRoom(RoomDescriptionDTO roomDescription) {
     // Clear previous room elements
-    clearRoom();
+    clear();
 
     // Set room name
     roomNameLabel.setText(roomDescription.getName());
@@ -281,13 +281,16 @@ public class RoomView extends StackPane {
   }
 
   /**
-   * Clears all room elements.
+   * Clears all room elements and resets the view to a default state.
    */
-  private void clearRoom() {
+  public void clear() {
     suspects.clear();
     objects.clear();
     interactiveLayer.getChildren().clear();
     roomBackgroundImage.setImage(null);
+    roomNameLabel.setText("Room Name");
+    // Reset any placeholder styling
+    this.setStyle("-fx-background-color: #1a1a1a;");
   }
 
   /**

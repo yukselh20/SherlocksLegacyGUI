@@ -214,7 +214,7 @@ public void handlePlayerCancelLobby(String playerId) {
     logger.info(message);
 }
 
-  private RoomDescriptionDTO createRoomDescriptionDTO(Room room, String playerId) {
+  public RoomDescriptionDTO createRoomDescriptionDTO(Room room, String playerId) {
     if (room == null) return null;
     List<String> objectNames = room.getObjects().values().stream().map(GameObject::getName).collect(Collectors.toList());
     String occupantsStr = getOccupantsDescriptionInRoom(room, playerId);
@@ -392,7 +392,9 @@ public void handlePlayerCancelLobby(String playerId) {
       output = ((TextMessage) responseDto).getText();
     } else if (responseDto instanceof RoomDescriptionDTO rd) {
       StringBuilder sb = new StringBuilder();
-      sb.append("\n--- ").append(rd.getName()).append(" ---\n");
+      // Add a machine-readable tag for the output parser
+      sb.append("[ROOM_UPDATE]\n");
+      sb.append("--- ").append(rd.getName()).append(" ---\n");
       sb.append(rd.getDescription()).append("\n");
       sb.append("Objects: ").append(rd.getObjectNames().isEmpty() ? "None" : String.join(", ", rd.getObjectNames())).append("\n");
       sb.append("Occupants: ").append(rd.getOccupantNames().isEmpty() ? "None" : String.join(", ", rd.getOccupantNames())).append("\n");

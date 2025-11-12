@@ -401,6 +401,8 @@ public class MainController implements GameClientStateListener {
         isSinglePlayer = true;
         isHostPlayer = true;
         taskStates.clear();
+        // Clear the room view to prevent state bleeding from multiplayer
+        updateRoomView(null);
         updateStatus("Starting Single Player...");
         currentState = UIState.CHOOSING_CASE;
         singlePlayerGame = new SinglePlayerMain();
@@ -763,12 +765,29 @@ public class MainController implements GameClientStateListener {
     }
 
     public void updateRoomView(RoomDescriptionDTO roomDescription) {
-        if (roomView != null && roomDescription != null) {
+        if (roomView != null) {
             Platform.runLater(() -> {
-                roomView.loadRoom(roomDescription);
-                updateRightPanel(roomDescription);
-                updateStatus("Current room: " + roomDescription.getName());
+                if (roomDescription != null) {
+                    roomView.loadRoom(roomDescription);
+                    updateRightPanel(roomDescription);
+                    updateStatus("Current room: " + roomDescription.getName());
+                } else {
+                    roomView.clear();
+                    updateRightPanel(null);
+                    updateStatus("No active game.");
+                }
             });
+        }
+    }
+
+    public void refreshRoomView() {
+        if (isSinglePlayer && singlePlayerGame != null && singlePlayerGame.getGameContext() != null) {
+            singleplayer.GameContextSinglePlayer context = singlePlayerGame.getGameContext();
+            Core.Room currentRoom = context.getCurrentRoomForPlayer(null);
+            if (currentRoom != null) {
+                RoomDescriptionDTO dto = context.createRoomDescriptionDTO(currentRoom, null);
+                updateRoomView(dto);
+            }
         }
     }
 

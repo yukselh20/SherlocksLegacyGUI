@@ -78,8 +78,12 @@ public class AddCaseWindow extends Stage {
     }
 
     private void showAlert(String message) {
-        // In a real app, you might use a custom dialog.
-        // For simplicity, we'll just print to the main terminal.
-        System.out.println("[Add Case] " + message);
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+            javafx.scene.control.Alert.AlertType.INFORMATION
+        );
+        alert.setTitle("Add Case Status");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

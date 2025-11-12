@@ -65,13 +65,7 @@
       <Separator/>
       
       <Label text="Neighboring Rooms:" style="-fx-text-fill: #cccccc; -fx-font-size: 12;"/>
-      <ListView prefHeight="100" style="-fx-background-color: #1a1a1a;"/>
-      
-      <Label text="Suspects:" style="-fx-text-fill: #cccccc; -fx-font-size: 12;"/>
-      <ListView prefHeight="100" style="-fx-background-color: #1a1a1a;"/>
-      
-      <Label text="Objects:" style="-fx-text-fill: #cccccc; -fx-font-size: 12;"/>
-      <ListView prefHeight="100" style="-fx-background-color: #1a1a1a;"/>
+      <VBox fx:id="neighboringRoomsContainer" spacing="5"/>
     </VBox>
   </right>
 

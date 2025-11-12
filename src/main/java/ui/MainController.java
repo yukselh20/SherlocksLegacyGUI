@@ -21,6 +21,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -87,6 +88,8 @@ public class MainController implements GameClientStateListener {
     private StackPane roomPane;
     @FXML
     private VBox rightInfoPanel;
+    @FXML
+    private VBox neighboringRoomsContainer;
     @FXML
     private TextArea terminalTextArea;
     @FXML
@@ -817,7 +820,33 @@ public class MainController implements GameClientStateListener {
     }
 
     private void updateRightPanel(RoomDescriptionDTO roomDescription) {
-        // This can be expanded later.
+        neighboringRoomsContainer.getChildren().clear();
+
+        if (roomDescription == null || roomDescription.getExits() == null) {
+            return;
+        }
+
+        for (java.util.Map.Entry<String, String> entry : roomDescription.getExits().entrySet()) {
+            String direction = entry.getKey();
+            String roomName = entry.getValue();
+            String buttonText = direction + ": " + roomName;
+
+            Button roomButton = new Button(buttonText);
+            roomButton.setPrefWidth(Double.MAX_VALUE); // Make buttons fill the width
+
+            roomButton.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) {
+                    // Command is the direction, e.g., "north"
+                    String command = "move " + direction;
+                    sendCommand(command);
+                }
+            });
+
+            Tooltip tooltip = new Tooltip("Double-click to move to the " + roomName);
+            roomButton.setTooltip(tooltip);
+
+            neighboringRoomsContainer.getChildren().add(roomButton);
+        }
     }
 
     public void showRoomResponse(String targetName, String response) {

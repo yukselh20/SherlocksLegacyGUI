@@ -130,7 +130,14 @@ public class MainController implements GameClientStateListener {
 
         // Add a listener to auto-scroll the terminal to the bottom on new text
         terminalTextArea.textProperty().addListener((observable, oldValue, newValue) -> {
-            Platform.runLater(() -> terminalTextArea.setScrollTop(Double.MAX_VALUE));
+            // By nesting Platform.runLater, we schedule the scroll to happen
+            // on a subsequent pulse of the JavaFX application thread. This gives
+            // the layout-engine time to recalculate the view bounds after a text change,
+            // ensuring the scroll goes to the correct final position, especially during
+            // view transitions.
+            Platform.runLater(() -> {
+                Platform.runLater(() -> terminalTextArea.setScrollTop(Double.MAX_VALUE));
+            });
         });
 
         terminalInputField.setOnAction(event -> handleTerminalInput());

@@ -49,7 +49,8 @@ public class MainController implements GameClientStateListener {
         CASE_INVITATION,
         GAME_SINGLE,
         GAME_MULTI,
-        MULTIPLAYER_MENU
+        MULTIPLAYER_MENU,
+        ADDING_CASE_TERMINAL
     }
 
     private enum UIMultiplayerSubState {
@@ -290,7 +291,7 @@ public class MainController implements GameClientStateListener {
         addCaseButton.getStyleClass().add("main-menu-button");
         addCaseButton.setOnAction(event -> {
             playSound("click.wav");
-            handleMainMenuInput("4");
+            new ui.windows.AddCaseWindow(this).show();
         });
 
         mainMenuVBox
@@ -310,7 +311,8 @@ public class MainController implements GameClientStateListener {
                 startServer();
                 break;
             case "4":
-                new ui.windows.AddCaseWindow(this).show();
+                currentState = UIState.ADDING_CASE_TERMINAL;
+                terminalTextArea.appendText("\nPlease enter the full file path to the case JSON file and press Enter:\n");
                 break;
             case "5":
                 shutdown();
@@ -353,7 +355,8 @@ public class MainController implements GameClientStateListener {
                     terminalTextArea.appendText("1. Single Player\n");
                     terminalTextArea.appendText("2. Multiplayer (Join/Host)\n");
                     terminalTextArea.appendText("3. Start Server Only\n");
-                    terminalTextArea.appendText("4. Quit\n");
+                    terminalTextArea.appendText("4. Add Custom Case\n");
+                    terminalTextArea.appendText("5. Quit\n");
                     tasksButton.setVisible(false);
                     journalButton.setVisible(false);
                     chatButton.setVisible(false);
@@ -638,6 +641,11 @@ public class MainController implements GameClientStateListener {
                 handleCaseSelectionInput(input);
             } else if (currentState == UIState.CHOOSING_LANGUAGE) {
                 handleLanguageSelectionInput(input);
+            } else if (currentState == UIState.ADDING_CASE_TERMINAL) {
+                String result = singleplayer.util.CaseFileUtil.addCaseFile(input);
+                terminalTextArea.appendText(result + "\n");
+                currentState = UIState.MENU;
+                updateUIVisibility(); // To reprint the main menu
             } else if (currentState == UIState.CASE_INVITATION && !isSinglePlayer) {
                 gameClient.enqueueUserInput(input);
             }

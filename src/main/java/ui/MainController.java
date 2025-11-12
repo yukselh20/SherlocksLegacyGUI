@@ -127,6 +127,12 @@ public class MainController implements GameClientStateListener {
         this.taskStates = new java.util.HashMap<>();
         terminalTextArea.setEditable(false);
         terminalTextArea.setWrapText(true);
+
+        // Add a listener to auto-scroll the terminal to the bottom on new text
+        terminalTextArea.textProperty().addListener((observable, oldValue, newValue) -> {
+            terminalTextArea.setScrollTop(Double.MAX_VALUE);
+        });
+
         terminalInputField.setOnAction(event -> handleTerminalInput());
         tasksButton.setOnAction(event -> {
             playSound("click.wav");

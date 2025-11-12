@@ -65,8 +65,6 @@ public class TextAreaOutputStream extends OutputStream {
       // Update UI on JavaFX Application Thread
       Platform.runLater(() -> {
         textArea.appendText(text);
-        // Auto-scroll to bottom
-        textArea.setScrollTop(Double.MAX_VALUE);
       });
     }
   }

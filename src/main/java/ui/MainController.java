@@ -284,7 +284,7 @@ public class MainController implements GameClientStateListener {
         quitButton.getStyleClass().add("main-menu-button");
         quitButton.setOnAction(event -> {
             playSound("click.wav");
-            handleMainMenuInput("4");
+            shutdown();
         });
 
         Button addCaseButton = new Button("Add Custom Case");

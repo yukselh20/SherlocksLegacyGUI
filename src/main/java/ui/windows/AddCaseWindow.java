@@ -61,11 +61,8 @@ public class AddCaseWindow extends Stage {
             }
         });
 
-        Button closeButton = new Button("Close & Refresh");
-        closeButton.setOnAction(event -> {
-            mainController.showSinglePlayerCaseSelection();
-            close();
-        });
+        Button closeButton = new Button("Close");
+        closeButton.setOnAction(event -> close());
 
         layout.getChildren().addAll(titleLabel, caseListView, pathLabel, pathTextField, addButton, closeButton);
 

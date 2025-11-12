@@ -286,9 +286,16 @@ public class MainController implements GameClientStateListener {
             handleMainMenuInput("4");
         });
 
+        Button addCaseButton = new Button("Add Custom Case");
+        addCaseButton.getStyleClass().add("main-menu-button");
+        addCaseButton.setOnAction(event -> {
+            playSound("click.wav");
+            handleMainMenuInput("4");
+        });
+
         mainMenuVBox
                 .getChildren()
-                .addAll(singlePlayerButton, multiplayerButton, startServerButton, quitButton);
+                .addAll(singlePlayerButton, multiplayerButton, startServerButton, addCaseButton, quitButton);
     }
 
     private void handleMainMenuInput(String input) {
@@ -303,10 +310,13 @@ public class MainController implements GameClientStateListener {
                 startServer();
                 break;
             case "4":
+                new ui.windows.AddCaseWindow(this).show();
+                break;
+            case "5":
                 shutdown();
                 break;
             default:
-                terminalTextArea.appendText("Invalid selection. Please enter a number from 1 to 4.\n");
+                terminalTextArea.appendText("Invalid selection. Please enter a number from 1 to 5.\n");
                 break;
         }
     }
@@ -432,12 +442,7 @@ public class MainController implements GameClientStateListener {
             updateUIVisibility();
         });
 
-        Button addCaseButton = new Button("Add New Case");
-        addCaseButton.setOnAction(event -> {
-            new ui.windows.AddCaseWindow(this).show();
-        });
-
-        caseSelectionBox.getChildren().addAll(addCaseButton, backButton);
+        caseSelectionBox.getChildren().add(backButton);
         roomPane.getChildren().clear();
         roomPane.getChildren().add(caseSelectionBox);
     }

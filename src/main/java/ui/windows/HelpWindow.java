@@ -9,12 +9,28 @@ public class HelpWindow extends Stage {
 
     public HelpWindow() {
         setTitle("Help");
+
+        // Create and style the layout
         VBox layout = new VBox();
+        layout.setStyle("-fx-background-color: #2b2b2b; -fx-padding: 10;");
+
+        // Create and style the text area
         TextArea helpText = new TextArea();
         helpText.setEditable(false);
         helpText.setText(getHelpContent());
+        helpText.setStyle(
+                "-fx-control-inner-background: #1a1a1a; " +
+                "-fx-text-fill: #e0e0e0; " +
+                "-fx-font-family: 'Courier New'; " +
+                "-fx-font-size: 14px;"
+        );
+        helpText.setWrapText(true);
+
         layout.getChildren().add(helpText);
-        Scene scene = new Scene(layout, 400, 300);
+        VBox.setVgrow(helpText, javafx.scene.layout.Priority.ALWAYS);
+
+        // Create and set the scene
+        Scene scene = new Scene(layout, 500, 400);
         setScene(scene);
     }
 

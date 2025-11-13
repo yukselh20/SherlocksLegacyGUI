@@ -174,6 +174,16 @@ public class RoomView extends StackPane {
 
     dialog.getButtonTypes().setAll(askWatsonButton, cancelButton);
 
+    // Apply custom styling
+    dialog.getDialogPane().setStyle(
+            "-fx-background-color: #2b2b2b; " +
+            "-fx-border-color: #d4af37; " +
+            "-fx-border-width: 1;"
+    );
+    dialog.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: #e0e0e0;");
+    dialog.getDialogPane().lookup(".header-panel").setStyle("-fx-background-color: #1a1a1a;");
+    dialog.getDialogPane().lookup(".header-panel .label").setStyle("-fx-text-fill: #d4af37; -fx-font-weight: bold;");
+
     Optional<ButtonType> result = dialog.showAndWait();
 
     if (result.isPresent() && result.get() == askWatsonButton) {
@@ -196,6 +206,16 @@ public class RoomView extends StackPane {
     ButtonType cancelButton = new ButtonType("Cancel");
 
     dialog.getButtonTypes().setAll(questionButton, deduceButton, cancelButton);
+
+    // Apply custom styling
+    dialog.getDialogPane().setStyle(
+            "-fx-background-color: #2b2b2b; " +
+            "-fx-border-color: #d4af37; " +
+            "-fx-border-width: 1;"
+    );
+    dialog.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: #e0e0e0;");
+    dialog.getDialogPane().lookup(".header-panel").setStyle("-fx-background-color: #1a1a1a;");
+    dialog.getDialogPane().lookup(".header-panel .label").setStyle("-fx-text-fill: #d4af37; -fx-font-weight: bold;");
 
     Optional<ButtonType> result = dialog.showAndWait();
 
@@ -224,6 +244,16 @@ public class RoomView extends StackPane {
     ButtonType cancelButton = new ButtonType("Cancel");
 
     dialog.getButtonTypes().setAll(examineButton, deduceButton, cancelButton);
+
+    // Apply custom styling
+    dialog.getDialogPane().setStyle(
+            "-fx-background-color: #2b2b2b; " +
+            "-fx-border-color: #d4af37; " +
+            "-fx-border-width: 1;"
+    );
+    dialog.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: #e0e0e0;");
+    dialog.getDialogPane().lookup(".header-panel").setStyle("-fx-background-color: #1a1a1a;");
+    dialog.getDialogPane().lookup(".header-panel .label").setStyle("-fx-text-fill: #d4af37; -fx-font-weight: bold;");
 
     Optional<ButtonType> result = dialog.showAndWait();
     

@@ -183,7 +183,14 @@ public class MainController implements GameClientStateListener {
         TextArea invitationTextArea = new TextArea(invitationText);
         invitationTextArea.setEditable(false);
         invitationTextArea.setWrapText(true);
-        invitationTextArea.setStyle("-fx-control-inner-background: #0a0a0a; -fx-text-fill: #00ff00; -fx-font-family: 'Courier New';");
+        invitationTextArea.setStyle(
+                "-fx-control-inner-background: #2b2b2b; " +
+                "-fx-text-fill: #e0e0e0; " +
+                "-fx-font-family: 'Georgia'; " +
+                "-fx-font-size: 14px; " +
+                "-fx-border-color: #d4af37; " +
+                "-fx-border-width: 1;"
+        );
         invitationTextArea.setPrefWidth(600);
         invitationTextArea.setPrefHeight(400);
 

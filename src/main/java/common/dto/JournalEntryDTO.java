@@ -6,21 +6,33 @@ import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
+import java.util.UUID;
 public class JournalEntryDTO implements Serializable {
   @Serial
   private static final long serialVersionUID = 1L;
+  private final UUID id;
   private final String text;
   private final String contributorPlayerId;
   private final long timestamp;
 
   @JsonCreator
   public JournalEntryDTO(
+          @JsonProperty("id") UUID id,
           @JsonProperty("text") String text,
           @JsonProperty("contributorPlayerId") String contributorPlayerId,
           @JsonProperty("timestamp") long timestamp) {
+    this.id = (id == null) ? UUID.randomUUID() : id;
     this.text = Objects.requireNonNull(text, "Text cannot be null");
     this.contributorPlayerId = Objects.requireNonNull(contributorPlayerId, "Contributor ID cannot be null");
     this.timestamp = timestamp;
+  }
+
+  public JournalEntryDTO(String text, String contributorPlayerId, long timestamp) {
+    this(null, text, contributorPlayerId, timestamp);
+  }
+
+  public UUID getId() {
+    return id;
   }
 
   public String getText() {

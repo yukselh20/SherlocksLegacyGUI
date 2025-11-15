@@ -38,8 +38,10 @@ import ui.util.RoomView;
 import ui.util.TextAreaOutputStream;
 import ui.windows.ChatWindow;
 import ui.windows.JournalWindow;
-import ui.windows.TasksWindow;
+import javafx.scene.layout.Pane;
 import ui.windows.HelpWindow;
+import ui.windows.PinboardWindow;
+import ui.windows.TasksWindow;
 
 public class MainController implements GameClientStateListener {
 
@@ -105,6 +107,9 @@ public class MainController implements GameClientStateListener {
     private ChatWindow chatWindow;
     private TasksWindow tasksWindow;
     private HelpWindow helpWindow;
+    private PinboardWindow pinboardWindow;
+    @FXML
+    private Button pinboardButton;
     private RoomView roomView;
     private int unreadChatCount = 0;
 
@@ -169,6 +174,12 @@ public class MainController implements GameClientStateListener {
 
         createMainMenu();
         setupButtonIcons();
+
+        pinboardButton.setOnAction(event -> {
+            playSound("click.wav");
+            openPinboardWindow();
+        });
+
         updateUIVisibility();
     }
 
@@ -350,6 +361,7 @@ public class MainController implements GameClientStateListener {
                     chatButton.setVisible(false);
                     helpButton.setVisible(false);
                     exitButton.setVisible(false);
+                    if (pinboardButton != null) pinboardButton.setVisible(false);
                     rightInfoPanel.setVisible(false);
                     return; // Return early as the view is handled by show... methods
                 case CASE_INVITATION:
@@ -358,6 +370,7 @@ public class MainController implements GameClientStateListener {
                     chatButton.setVisible(false);
                     helpButton.setVisible(false);
                     exitButton.setVisible(isHostPlayer); // Only host can exit at this stage
+                    if (pinboardButton != null) pinboardButton.setVisible(false);
                     rightInfoPanel.setVisible(false);
                     return; // Return early to prevent view transition logic from running
                 case MENU:
@@ -375,6 +388,7 @@ public class MainController implements GameClientStateListener {
                     chatButton.setVisible(false);
                     helpButton.setVisible(false);
                     exitButton.setVisible(false);
+                    if (pinboardButton != null) pinboardButton.setVisible(false);
                     rightInfoPanel.setVisible(false);
                     break;
                 case MULTIPLAYER_MENU:
@@ -383,12 +397,14 @@ public class MainController implements GameClientStateListener {
                     chatButton.setVisible(false);
                     helpButton.setVisible(false);
                     exitButton.setVisible(false);
+                    if (pinboardButton != null) pinboardButton.setVisible(false);
                     rightInfoPanel.setVisible(false);
                     return; // Return early to prevent view transition logic from running
                 case GAME_SINGLE:
                     nextView = roomView;
                     tasksButton.setVisible(true);
                     journalButton.setVisible(true);
+                    if (pinboardButton != null) pinboardButton.setVisible(true);
                     chatButton.setVisible(false);
                     helpButton.setVisible(true);
                     exitButton.setVisible(true);
@@ -398,6 +414,7 @@ public class MainController implements GameClientStateListener {
                     nextView = roomView;
                     tasksButton.setVisible(true);
                     journalButton.setVisible(true);
+                    if (pinboardButton != null) pinboardButton.setVisible(true);
                     chatButton.setVisible(true);
                     helpButton.setVisible(true);
                     exitButton.setVisible(true);
@@ -753,6 +770,13 @@ public class MainController implements GameClientStateListener {
         helpWindow.show();
     }
 
+    private void openPinboardWindow() {
+        if (pinboardWindow == null) {
+            pinboardWindow = new PinboardWindow(this);
+        }
+        pinboardWindow.show();
+    }
+
     public void incrementUnreadChat() {
         unreadChatCount++;
         updateUnreadChatLabel();
@@ -798,6 +822,14 @@ public class MainController implements GameClientStateListener {
 
     public GameClient getGameClient() {
         return gameClient;
+    }
+
+    public SinglePlayerMain getSinglePlayerGame() {
+        return singlePlayerGame;
+    }
+
+    public JsonDTO.CaseFile getSelectedCaseFile() {
+        return selectedCaseFile;
     }
 
     public void updateRoomView(RoomDescriptionDTO roomDescription) {

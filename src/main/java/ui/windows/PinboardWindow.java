@@ -121,7 +121,6 @@ public class PinboardWindow {
     }
 
     private void loadEvidence() {
-        canvas.getChildren().removeIf(node -> node instanceof EvidenceCard);
         List<JournalEntryDTO> entries = null;
         if (mainController.getGameClient() != null) {
             entries = mainController.getGameClient().getJournalEntries();
@@ -132,6 +131,9 @@ public class PinboardWindow {
         if (entries != null) {
             for (int i = 0; i < entries.size(); i++) {
                 JournalEntryDTO entry = entries.get(i);
+                if (getNodeById(entry.getId().toString()) != null) {
+                    continue;
+                }
                 String text = entry.getText();
                 String[] lines = text.split("\n", 2);
                 String title = lines[0];
@@ -285,8 +287,6 @@ public class PinboardWindow {
             File file = new File(System.getProperty("user.home"), ".detective_game" + File.separator + "pinboards" + File.separator + fileName);
             if (file.exists()) {
                 PinboardState state = mapper.readValue(file, PinboardState.class);
-                canvas.getChildren().clear();
-                loadEvidence();
 
                 List<Region> nodes = new ArrayList<>();
                 for (PinboardState.CardState cardState : state.getCards()) {

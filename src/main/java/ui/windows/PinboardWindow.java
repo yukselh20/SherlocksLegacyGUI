@@ -22,6 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.shape.Rectangle;
 import singleplayer.PinboardState;
 import javafx.scene.layout.Pane;
 import javafx.animation.PauseTransition;
@@ -81,9 +82,30 @@ public class PinboardWindow {
                 highlightButton, zoomInButton, zoomOutButton, clearButton);
         root.setTop(toolbar);
 
+        Pane viewport = new Pane();
         canvas = new Pane();
         canvas.setStyle("-fx-background-color: #f5f5dc;");
-        root.setCenter(canvas);
+        viewport.getChildren().add(canvas);
+        root.setCenter(viewport);
+
+        Rectangle clip = new Rectangle();
+        viewport.setClip(clip);
+        viewport.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+            clip.setWidth(newBounds.getWidth());
+            clip.setHeight(newBounds.getHeight());
+        });
+
+        canvas.setOnScroll(event -> {
+            if (event.isControlDown()) {
+                double delta = event.getDeltaY();
+                if (delta < 0) {
+                    zoom(0.9);
+                } else {
+                    zoom(1.1);
+                }
+                event.consume();
+            }
+        });
 
         root.setRight(createFinalExamTemplate());
 

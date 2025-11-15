@@ -137,6 +137,7 @@ public class PinboardWindow {
         if (stage != null) {
             loadEvidence();
             loadPinboardState();
+            drawAutomaticConnections();
             stage.show();
             stage.toFront();
         }
@@ -299,6 +300,7 @@ public class PinboardWindow {
         for (javafx.scene.Node node : canvas.getChildren()) {
             if (node instanceof ConnectionLine) {
                 ConnectionLine line = (ConnectionLine) node;
+                if (line.isAutomatic()) continue; // Skip automatic connections
                 String startId = getNodeId(line.getStartNode());
                 String endId = getNodeId(line.getEndNode());
                 if (startId != null && endId != null) {
@@ -390,5 +392,34 @@ public class PinboardWindow {
             }
         }
         return null;
+    }
+
+    private void drawAutomaticConnections() {
+        // First, remove any existing automatic connections to avoid duplicates
+        canvas.getChildren().removeIf(node -> node instanceof ConnectionLine && ((ConnectionLine) node).isAutomatic());
+
+        List<JournalEntryDTO> entries = null;
+        if (mainController.getGameClient() != null) {
+            entries = mainController.getGameClient().getJournalEntries();
+        } else if (mainController.getSinglePlayerGame() != null) {
+            entries = mainController.getSinglePlayerGame().getGameContext().getJournalEntries(null);
+        }
+
+        if (entries == null) return;
+
+        for (JournalEntryDTO entry : entries) {
+            if (entry.getSourceIds() != null && !entry.getSourceIds().isEmpty()) {
+                Region deductionNode = (Region) getNodeById(entry.getId().toString());
+                if (deductionNode == null) continue;
+
+                for (String sourceId : entry.getSourceIds()) {
+                    Region sourceNode = (Region) getNodeById(sourceId);
+                    if (sourceNode != null) {
+                        ConnectionLine line = new ConnectionLine(sourceNode, deductionNode, true);
+                        canvas.getChildren().add(0, line);
+                    }
+                }
+            }
+        }
     }
 }

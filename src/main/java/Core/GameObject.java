@@ -1,6 +1,9 @@
 package Core;
 
+import java.util.UUID;
+
 public class GameObject {
+  private final UUID id;
   private String name;
   private String description;
   private String examine; // Detailed examination text
@@ -11,6 +14,7 @@ public class GameObject {
 
   // Constructor with all fields
   public GameObject(String name, String description, String examine, String deduce) {
+    this.id = UUID.randomUUID();
     this.name = name;
     this.description = description;
     this.examine = examine;
@@ -39,4 +43,7 @@ public class GameObject {
     return deduce;
   }
 
+  public UUID getId() {
+    return id;
+  }
 }

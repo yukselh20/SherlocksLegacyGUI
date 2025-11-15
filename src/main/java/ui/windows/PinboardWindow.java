@@ -44,6 +44,7 @@ public class PinboardWindow {
     private Region startNode = null;
     private boolean isHighlighting = false;
     private double currentScale = 1.0;
+    private double mouseX, mouseY;
 
     public PinboardWindow(MainController controller) {
         this.mainController = controller;
@@ -93,6 +94,24 @@ public class PinboardWindow {
         viewport.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
             clip.setWidth(newBounds.getWidth());
             clip.setHeight(newBounds.getHeight());
+        });
+
+        viewport.setOnMousePressed(event -> {
+            if (event.getTarget() == viewport) {
+                mouseX = event.getSceneX();
+                mouseY = event.getSceneY();
+            }
+        });
+
+        viewport.setOnMouseDragged(event -> {
+            if (event.getTarget() == viewport) {
+                double deltaX = event.getSceneX() - mouseX;
+                double deltaY = event.getSceneY() - mouseY;
+                canvas.setTranslateX(canvas.getTranslateX() + deltaX);
+                canvas.setTranslateY(canvas.getTranslateY() + deltaY);
+                mouseX = event.getSceneX();
+                mouseY = event.getSceneY();
+            }
         });
 
         canvas.setOnScroll(event -> {

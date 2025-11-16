@@ -1,11 +1,15 @@
 package Core;
 
+import java.util.UUID;
+
 public class Suspect extends MovableCharacter {
+  private final UUID id;
   private String name;
   private String statement;
   private String clue;
 
   public Suspect(String name, String statement, String clue) {
+    this.id = UUID.randomUUID();
     this.name = name;
     this.statement = statement;
     this.clue = clue;
@@ -23,4 +27,7 @@ public class Suspect extends MovableCharacter {
     return clue;
   }
 
+  public UUID getId() {
+    return id;
+  }
 }

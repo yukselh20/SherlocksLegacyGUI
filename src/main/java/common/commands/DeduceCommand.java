@@ -87,7 +87,7 @@ public class DeduceCommand extends BaseCommand {
       context.sendResponseToPlayer(getPlayerId(), new TextMessage(messageText, false));
   
       String journalText = "Deduced from " + object.getName() + ": " + clue;
-      context.addJournalEntry(new JournalEntryDTO(journalText, getPlayerId(), System.currentTimeMillis()));
+      context.addJournalEntry(new JournalEntryDTO(journalText, getPlayerId(), System.currentTimeMillis(), List.of(object.getId())));
   
       // Display the NEW, SHARED team counter.
       context.sendResponseToPlayer(getPlayerId(), new TextMessage("Team deductions used: " + context.getSessionDeduceCount(), false));
@@ -112,7 +112,7 @@ public class DeduceCommand extends BaseCommand {
     context.sendResponseToPlayer(getPlayerId(), new TextMessage(messageText, false));
 
     String journalText = "Deduced about " + suspect.getName() + ": " + clue;
-    context.addJournalEntry(new JournalEntryDTO(journalText, getPlayerId(), System.currentTimeMillis()));
+    context.addJournalEntry(new JournalEntryDTO(journalText, getPlayerId(), System.currentTimeMillis(), List.of(suspect.getId())));
 
     // Display the NEW, SHARED team counter.
     context.sendResponseToPlayer(getPlayerId(), new TextMessage("Team deductions used: " + context.getSessionDeduceCount(), false));

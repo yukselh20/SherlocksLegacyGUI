@@ -2,8 +2,12 @@ package ui.util;
 
 import java.util.UUID;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 public class StickyNote extends VBox {
@@ -22,9 +26,22 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setPrefSize(150, 100);
+        setPrefSize(125, 125);
 
-        getChildren().addAll(dragHandle, textArea);
+        // Delete button
+        Button deleteButton = new Button("X");
+        deleteButton.setStyle("-fx-background-color: transparent; -fx-text-fill: red; -fx-font-weight: bold;");
+        deleteButton.setOnAction(event -> {
+            Pane parent = (Pane) this.getParent();
+            if (parent != null) {
+                parent.getChildren().remove(this);
+            }
+        });
+
+        StackPane header = new StackPane(dragHandle, deleteButton);
+        StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
+
+        getChildren().addAll(header, textArea);
     }
 
     public StickyNote(String id, String text) {
@@ -38,9 +55,22 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setPrefSize(150, 100);
+        setPrefSize(125, 125);
 
-        getChildren().addAll(dragHandle, textArea);
+        // Delete button
+        Button deleteButton = new Button("X");
+        deleteButton.setStyle("-fx-background-color: transparent; -fx-text-fill: red; -fx-font-weight: bold;");
+        deleteButton.setOnAction(event -> {
+            Pane parent = (Pane) this.getParent();
+            if (parent != null) {
+                parent.getChildren().remove(this);
+            }
+        });
+
+        StackPane header = new StackPane(dragHandle, deleteButton);
+        StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
+
+        getChildren().addAll(header, textArea);
     }
 
     public UUID getStickyNoteId() {

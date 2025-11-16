@@ -412,8 +412,8 @@ public class PinboardWindow {
                 Region deductionNode = (Region) getNodeById(entry.getId().toString());
                 if (deductionNode == null) continue;
 
-                for (String sourceId : entry.getSourceIds()) {
-                    Region sourceNode = (Region) getNodeById(sourceId);
+                for (java.util.UUID sourceId : entry.getSourceIds()) {
+                    Region sourceNode = (Region) getNodeById(sourceId.toString());
                     if (sourceNode != null) {
                         ConnectionLine line = new ConnectionLine(sourceNode, deductionNode, true);
                         canvas.getChildren().add(0, line);

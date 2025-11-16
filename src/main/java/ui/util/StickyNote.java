@@ -8,7 +8,10 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Cursor;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
 public class StickyNote extends VBox {
 
@@ -26,7 +29,7 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setPrefSize(125, 125);
+        setPrefSize(250, 200);
 
         // Delete button
         Button deleteButton = new Button("X");
@@ -41,7 +44,26 @@ public class StickyNote extends VBox {
         StackPane header = new StackPane(dragHandle, deleteButton);
         StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        getChildren().addAll(header, textArea);
+        // Resize handle
+        Rectangle resizeHandle = new Rectangle(10, 10, Color.BLACK);
+        resizeHandle.setCursor(Cursor.SE_RESIZE);
+
+        double[] startDrag = new double[2];
+
+        resizeHandle.setOnMousePressed(event -> {
+            startDrag[0] = getPrefWidth() - event.getX();
+            startDrag[1] = getPrefHeight() - event.getY();
+        });
+
+        resizeHandle.setOnMouseDragged(event -> {
+            setPrefWidth(event.getX() + startDrag[0]);
+            setPrefHeight(event.getY() + startDrag[1]);
+        });
+
+        StackPane footer = new StackPane(resizeHandle);
+        footer.setAlignment(Pos.BOTTOM_RIGHT);
+
+        getChildren().addAll(header, textArea, footer);
     }
 
     public StickyNote(String id, String text) {
@@ -55,7 +77,7 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setPrefSize(125, 125);
+        setPrefSize(250, 200);
 
         // Delete button
         Button deleteButton = new Button("X");
@@ -70,7 +92,26 @@ public class StickyNote extends VBox {
         StackPane header = new StackPane(dragHandle, deleteButton);
         StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        getChildren().addAll(header, textArea);
+        // Resize handle
+        Rectangle resizeHandle = new Rectangle(10, 10, Color.BLACK);
+        resizeHandle.setCursor(Cursor.SE_RESIZE);
+
+        double[] startDrag = new double[2];
+
+        resizeHandle.setOnMousePressed(event -> {
+            startDrag[0] = getPrefWidth() - event.getX();
+            startDrag[1] = getPrefHeight() - event.getY();
+        });
+
+        resizeHandle.setOnMouseDragged(event -> {
+            setPrefWidth(event.getX() + startDrag[0]);
+            setPrefHeight(event.getY() + startDrag[1]);
+        });
+
+        StackPane footer = new StackPane(resizeHandle);
+        footer.setAlignment(Pos.BOTTOM_RIGHT);
+
+        getChildren().addAll(header, textArea, footer);
     }
 
     public UUID getStickyNoteId() {

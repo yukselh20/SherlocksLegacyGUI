@@ -29,7 +29,7 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setMaxWidth(250);
+        setPrefWidth(200);
 
         // Delete button
         Button deleteButton = new Button("X");
@@ -59,7 +59,7 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setMaxWidth(250);
+        setPrefWidth(200);
 
         // Delete button
         Button deleteButton = new Button("X");

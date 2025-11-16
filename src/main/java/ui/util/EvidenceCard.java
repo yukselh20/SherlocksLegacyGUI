@@ -24,7 +24,7 @@ public class EvidenceCard extends VBox {
         setPadding(new javafx.geometry.Insets(10));
         setSpacing(5);
         setStyle("-fx-background-color: #ffffff; -fx-border-color: #000000; -fx-border-width: 1;");
-        setMaxWidth(300); // Set a max width to control wrapping
+        setPrefWidth(250); // Set a default width, height will auto-size
 
         // Delete button
         Button deleteButton = new Button("X");

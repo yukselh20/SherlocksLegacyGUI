@@ -208,14 +208,14 @@ public class PinboardWindow {
                 }
             } else if (isHighlighting) {
                 toggleHighlight((Region) node);
-            } else {
+            } else if (node.getCursor() == javafx.scene.Cursor.DEFAULT) {
                 mouseX[0] = event.getSceneX() - node.getLayoutX();
                 mouseY[0] = event.getSceneY() - node.getLayoutY();
             }
         });
 
         node.setOnMouseDragged(event -> {
-            if (!isConnecting) {
+            if (!isConnecting && node.getCursor() == javafx.scene.Cursor.DEFAULT) {
                 node.setLayoutX(event.getSceneX() - mouseX[0]);
                 node.setLayoutY(event.getSceneY() - mouseY[0]);
             }

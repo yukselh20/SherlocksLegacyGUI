@@ -24,8 +24,7 @@ public class EvidenceCard extends VBox {
         setPadding(new javafx.geometry.Insets(10));
         setSpacing(5);
         setStyle("-fx-background-color: #ffffff; -fx-border-color: #000000; -fx-border-width: 1;");
-        setPrefWidth(300); // Set a preferred width
-        setPrefHeight(200); // Set a preferred height
+        setMaxWidth(300); // Set a max width to control wrapping
 
         // Delete button
         Button deleteButton = new Button("X");
@@ -46,27 +45,70 @@ public class EvidenceCard extends VBox {
         Label summaryLabel = new Label(summary);
         summaryLabel.setWrapText(true);
 
-        // Resize handle
-        Rectangle resizeHandle = new Rectangle(10, 10, Color.BLACK);
-        resizeHandle.setCursor(Cursor.SE_RESIZE);
+        getChildren().addAll(header, summaryLabel);
+        setupResizing();
+    }
 
-        double[] startDrag = new double[2];
+    private void setupResizing() {
+        final double resizeMargin = 5;
+        final double[] startPos = new double[2];
+        final boolean[] isResizing = {false};
+        final Cursor[] cursor = {Cursor.DEFAULT};
 
-        resizeHandle.setOnMousePressed(event -> {
-            startDrag[0] = getPrefWidth() - event.getX();
-            startDrag[1] = getPrefHeight() - event.getY();
+        setOnMouseMoved(event -> {
+            double x = event.getX();
+            double y = event.getY();
+            double width = getWidth();
+            double height = getHeight();
+
+            if (x < resizeMargin || x > width - resizeMargin || y < resizeMargin || y > height - resizeMargin) {
+                if (x < resizeMargin) {
+                    cursor[0] = Cursor.W_RESIZE;
+                } else if (x > width - resizeMargin) {
+                    cursor[0] = Cursor.E_RESIZE;
+                } else if (y < resizeMargin) {
+                    cursor[0] = Cursor.N_RESIZE;
+                } else {
+                    cursor[0] = Cursor.S_RESIZE;
+                }
+                setCursor(cursor[0]);
+            } else {
+                setCursor(Cursor.DEFAULT);
+            }
         });
 
-        resizeHandle.setOnMouseDragged(event -> {
-            setPrefWidth(event.getX() + startDrag[0]);
-            setPrefHeight(event.getY() + startDrag[1]);
+        setOnMousePressed(event -> {
+            if (getCursor() != Cursor.DEFAULT) {
+                isResizing[0] = true;
+                startPos[0] = event.getSceneX();
+                startPos[1] = event.getSceneY();
+            }
         });
 
-        StackPane footer = new StackPane(resizeHandle);
-        footer.setAlignment(Pos.BOTTOM_RIGHT);
+        setOnMouseDragged(event -> {
+            if (isResizing[0]) {
+                double dx = event.getSceneX() - startPos[0];
+                double dy = event.getSceneY() - startPos[1];
 
+                if (cursor[0] == Cursor.W_RESIZE) {
+                    setPrefWidth(getPrefWidth() - dx);
+                    setLayoutX(getLayoutX() + dx);
+                } else if (cursor[0] == Cursor.E_RESIZE) {
+                    setPrefWidth(getPrefWidth() + dx);
+                } else if (cursor[0] == Cursor.N_RESIZE) {
+                    setPrefHeight(getPrefHeight() - dy);
+                    setLayoutY(getLayoutY() + dy);
+                } else if (cursor[0] == Cursor.S_RESIZE) {
+                    setPrefHeight(getPrefHeight() + dy);
+                }
+                startPos[0] = event.getSceneX();
+                startPos[1] = event.getSceneY();
+            }
+        });
 
-        getChildren().addAll(header, summaryLabel, footer);
+        setOnMouseReleased(event -> {
+            isResizing[0] = false;
+        });
     }
 
     public String getTitle() {

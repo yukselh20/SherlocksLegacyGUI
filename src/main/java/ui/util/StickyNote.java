@@ -29,7 +29,7 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setPrefSize(250, 200);
+        setMaxWidth(250);
 
         // Delete button
         Button deleteButton = new Button("X");
@@ -44,26 +44,8 @@ public class StickyNote extends VBox {
         StackPane header = new StackPane(dragHandle, deleteButton);
         StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        // Resize handle
-        Rectangle resizeHandle = new Rectangle(10, 10, Color.BLACK);
-        resizeHandle.setCursor(Cursor.SE_RESIZE);
-
-        double[] startDrag = new double[2];
-
-        resizeHandle.setOnMousePressed(event -> {
-            startDrag[0] = getPrefWidth() - event.getX();
-            startDrag[1] = getPrefHeight() - event.getY();
-        });
-
-        resizeHandle.setOnMouseDragged(event -> {
-            setPrefWidth(event.getX() + startDrag[0]);
-            setPrefHeight(event.getY() + startDrag[1]);
-        });
-
-        StackPane footer = new StackPane(resizeHandle);
-        footer.setAlignment(Pos.BOTTOM_RIGHT);
-
-        getChildren().addAll(header, textArea, footer);
+        getChildren().addAll(header, textArea);
+        setupResizing();
     }
 
     public StickyNote(String id, String text) {
@@ -77,7 +59,7 @@ public class StickyNote extends VBox {
 
         setPadding(new Insets(5));
         setStyle("-fx-background-color: #ffff99; -fx-border-color: #000; -fx-border-width: 1;");
-        setPrefSize(250, 200);
+        setMaxWidth(250);
 
         // Delete button
         Button deleteButton = new Button("X");
@@ -92,26 +74,8 @@ public class StickyNote extends VBox {
         StackPane header = new StackPane(dragHandle, deleteButton);
         StackPane.setAlignment(deleteButton, Pos.TOP_RIGHT);
 
-        // Resize handle
-        Rectangle resizeHandle = new Rectangle(10, 10, Color.BLACK);
-        resizeHandle.setCursor(Cursor.SE_RESIZE);
-
-        double[] startDrag = new double[2];
-
-        resizeHandle.setOnMousePressed(event -> {
-            startDrag[0] = getPrefWidth() - event.getX();
-            startDrag[1] = getPrefHeight() - event.getY();
-        });
-
-        resizeHandle.setOnMouseDragged(event -> {
-            setPrefWidth(event.getX() + startDrag[0]);
-            setPrefHeight(event.getY() + startDrag[1]);
-        });
-
-        StackPane footer = new StackPane(resizeHandle);
-        footer.setAlignment(Pos.BOTTOM_RIGHT);
-
-        getChildren().addAll(header, textArea, footer);
+        getChildren().addAll(header, textArea);
+        setupResizing();
     }
 
     public UUID getStickyNoteId() {
@@ -120,5 +84,67 @@ public class StickyNote extends VBox {
 
     public String getText() {
         return textArea.getText();
+    }
+
+    private void setupResizing() {
+        final double resizeMargin = 5;
+        final double[] startPos = new double[2];
+        final boolean[] isResizing = {false};
+        final Cursor[] cursor = {Cursor.DEFAULT};
+
+        setOnMouseMoved(event -> {
+            double x = event.getX();
+            double y = event.getY();
+            double width = getWidth();
+            double height = getHeight();
+
+            if (x < resizeMargin || x > width - resizeMargin || y < resizeMargin || y > height - resizeMargin) {
+                if (x < resizeMargin) {
+                    cursor[0] = Cursor.W_RESIZE;
+                } else if (x > width - resizeMargin) {
+                    cursor[0] = Cursor.E_RESIZE;
+                } else if (y < resizeMargin) {
+                    cursor[0] = Cursor.N_RESIZE;
+                } else {
+                    cursor[0] = Cursor.S_RESIZE;
+                }
+                setCursor(cursor[0]);
+            } else {
+                setCursor(Cursor.DEFAULT);
+            }
+        });
+
+        setOnMousePressed(event -> {
+            if (getCursor() != Cursor.DEFAULT) {
+                isResizing[0] = true;
+                startPos[0] = event.getSceneX();
+                startPos[1] = event.getSceneY();
+            }
+        });
+
+        setOnMouseDragged(event -> {
+            if (isResizing[0]) {
+                double dx = event.getSceneX() - startPos[0];
+                double dy = event.getSceneY() - startPos[1];
+
+                if (cursor[0] == Cursor.W_RESIZE) {
+                    setPrefWidth(getPrefWidth() - dx);
+                    setLayoutX(getLayoutX() + dx);
+                } else if (cursor[0] == Cursor.E_RESIZE) {
+                    setPrefWidth(getPrefWidth() + dx);
+                } else if (cursor[0] == Cursor.N_RESIZE) {
+                    setPrefHeight(getPrefHeight() - dy);
+                    setLayoutY(getLayoutY() + dy);
+                } else if (cursor[0] == Cursor.S_RESIZE) {
+                    setPrefHeight(getPrefHeight() + dy);
+                }
+                startPos[0] = event.getSceneX();
+                startPos[1] = event.getSceneY();
+            }
+        });
+
+        setOnMouseReleased(event -> {
+            isResizing[0] = false;
+        });
     }
 }
